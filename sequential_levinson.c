@@ -13,11 +13,11 @@ double levinson(double *t, double *y, long n){
 
   //DICHIARAZIONE VARIABILI
   //Vettore avanti e indietro
-  double f;
-  double b;
+  double *f;
+  double *b;
 
   //Vettore delle incognite
-  double x;
+  double *x;
 
   //Errori scalari per ogni estensione dei vettori f, b ed x
   double e_f;
