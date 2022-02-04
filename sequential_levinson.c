@@ -61,6 +61,12 @@ double levinson(double *t, double *y, long n){
     beta_f = -e_f/D;
     alpha_b = -e_b/D;
     beta_b = 1/D;
-  }
 
+    for (int i = 0; i < it; i++) {
+      f[i] = alpha_f * f[i] + beta_f * b[i];
+      b[i] = alpha_b * f[i] + beta_b * b[i];
+      x[i] = x[i] - ((y[it] - e_x) * b[i]);
+    }
+  }
+  
 }
