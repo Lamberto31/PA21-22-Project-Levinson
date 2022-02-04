@@ -50,7 +50,7 @@ double levinson(double *t, double *y, long n){
     e_b = 0;
     e_x = 0;
 
-    for (int i = 0; i < it; i++) {
+    for (int i = 0; i < it-1; i++) {
       e_f = e_f + t[it-i+it] * f[i];
       e_b = e_b + t[-i+it] * b[i];
       e_x = e_x + t[it-i+it] * f[i];
