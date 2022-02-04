@@ -32,4 +32,13 @@ double levinson(double *t, double *y, long n){
   double beta_b;
 
 
+  f = (double *) calloc(n, sizeof(double));
+  b = (double *) calloc(n, sizeof(double));
+  x = (double *) calloc(n, sizeof(double));
+
+  //CASO BASE
+  f[0] = 1/t[n-1];
+  b[0] = 1/t[n-1];
+  x[0] = y[0]/t[n-1];
+
 }
