@@ -5,7 +5,7 @@
 #define LOOP_COUNT 1
 
 double levinson(double*, double*, long);
-void random_vector_generator(long, double*);
+void random_vector_generator(long, double*, int);
 
 int main(int argc, char const *argv[]) {
 
@@ -21,14 +21,14 @@ int main(int argc, char const *argv[]) {
   y = (double *) calloc(n, sizeof(double));
 
   srand(time(NULL));
-  random_vector_generator(2*n-1, t);
-  random_vector_generator(n, y);
+  random_vector_generator(2*n-1, t, 100);
+  random_vector_generator(n, y, 100);
 
   levinson(t, y, n);
   return 0;
 }
 
-double levinson(double *t, double *y, long n){
+double levinson(double *t, double *y, long n) {
 
   //DICHIARAZIONE VARIABILI
   //Vettore avanti e indietro
@@ -96,12 +96,12 @@ double levinson(double *t, double *y, long n){
     fprintf(stdout, "y[%d] = %f\n", i, y[i]);
   }
   for (int i = 0; i < n; i++) {
-    fprintf(stdout, "x[%d]=%f\n", i, x[i]);
+    fprintf(stdout, "x[%d] = %f\n", i, x[i]);
   }
 }
 
-void random_vector_generator(long n, double *v) {
+void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
-    v[i] = rand() % 100;
+    v[i] = rand() % (max+1);
   }
 }
