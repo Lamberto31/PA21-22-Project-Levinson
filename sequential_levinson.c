@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define LOOP_COUNT 1
+#define MAX_VALUE 10
+#define LOOP_COUNT 10
 
 double levinson(double*, double*, long);
 void random_vector_generator(long, double*, int);
@@ -21,8 +22,8 @@ int main(int argc, char const *argv[]) {
   y = (double *) calloc(n, sizeof(double));
 
   srand(time(NULL));
-  random_vector_generator(2*n-1, t, 100);
-  random_vector_generator(n, y, 100);
+  random_vector_generator(2*n-1, t, MAX_VALUE);
+  random_vector_generator(n, y, MAX_VALUE);
 
   levinson(t, y, n);
   free(t), t = NULL;
@@ -59,38 +60,42 @@ double levinson(double *t, double *y, long n) {
   b = (double *) calloc(n, sizeof(double));
   x = (double *) calloc(n, sizeof(double));
 
-  //CASO BASE
-  f[0] = 1/t[n-1];
-  b[n-1] = 1/t[n-1];
-  x[0] = y[0]/t[n-1];
+  for(int iteration = 0; iteration < LOOP_COUNT; iteration++) {
+    fprintf(stdout, "iteration: %d\n", iteration);
+    //CASO BASE
+    f[0] = 1/t[n-1];
+    b[n-1] = 1/t[n-1];
+    x[0] = y[0]/t[n-1];
 
-  for (int it = 1; it < n; it++) {
+    for (int it = 1; it < n; it++) {
 
-    e_f = 0;
-    e_b = 0;
-    e_x = 0;
+      e_f = 0;
+      e_b = 0;
+      e_x = 0;
 
-    for (int i = 0; i < it; i++) {
-      e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-      e_b = e_b + t[-(i+1)+n-1] * b[n-it+i];
-      e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
-    }
+      for (int i = 0; i < it; i++) {
+        e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
+        e_b = e_b + t[-(i+1)+n-1] * b[n-it+i];
+        e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
+      }
 
-    d = 1 - (e_f * e_b);
-    alpha_f = 1/d;
-    beta_f = -e_f/d;
-    alpha_b = -e_b/d;
-    beta_b = 1/d;
+      d = 1 - (e_f * e_b);
+      alpha_f = 1/d;
+      beta_f = -e_f/d;
+      alpha_b = -e_b/d;
+      beta_b = 1/d;
 
-    for (int i = 0; i < it+1; i++) {
+      for (int i = 0; i < it+1; i++) {
 
-      f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
-      b[n-1-it+i] = alpha_b * f[i] + beta_b * b[n-1-it+i];
-      f[i] = f_temp;
+        f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
+        b[n-1-it+i] = alpha_b * f[i] + beta_b * b[n-1-it+i];
+        f[i] = f_temp;
 
-      x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
+        x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
+      }
     }
   }
+  //TEST
   for (int i = 0; i < 2*n-1; i++) {
     fprintf(stdout, "t[%d] = %f\n", i, t[i]);
   }
@@ -100,6 +105,7 @@ double levinson(double *t, double *y, long n) {
   for (int i = 0; i < n; i++) {
     fprintf(stdout, "x[%d] = %f\n", i, x[i]);
   }
+  //ENDTEST
   free(f), f = NULL;
   free(b), b = NULL;
   free(x), x = NULL;
