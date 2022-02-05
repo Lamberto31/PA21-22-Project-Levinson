@@ -22,7 +22,9 @@ int main(int argc, char const *argv[]) {
   y = (double *) calloc(n, sizeof(double));
 
   srand(time(NULL));
-  random_vector_generator(2*n-1, t, MAX_VALUE);
+  while (!t[n-1]) {
+    random_vector_generator(2*n-1, t, MAX_VALUE);
+  }
   random_vector_generator(n, y, MAX_VALUE);
 
   levinson(t, y, n);
@@ -56,12 +58,17 @@ double levinson(double *t, double *y, long n) {
   //Variabile temporanea per poter aggiornare b usando f
   double f_temp;
 
+  //Variabili per benchmark
+  int iterations;
+  clock_t elapsed;
+
   f = (double *) calloc(n, sizeof(double));
   b = (double *) calloc(n, sizeof(double));
   x = (double *) calloc(n, sizeof(double));
 
-  for(int iteration = 0; iteration < LOOP_COUNT; iteration++) {
-    fprintf(stdout, "iteration: %d\n", iteration);
+  elapsed = -clock();
+  //TODO INIZIALIZZARE VETTORI DATO CHE DOPO LA PRIMA ITERAZIONE SONO PIENI
+  for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
     //CASO BASE
     f[0] = 1/t[n-1];
     b[n-1] = 1/t[n-1];
@@ -95,6 +102,7 @@ double levinson(double *t, double *y, long n) {
       }
     }
   }
+  elapsed += clock();
   //TEST
   for (int i = 0; i < 2*n-1; i++) {
     fprintf(stdout, "t[%d] = %f\n", i, t[i]);
@@ -105,6 +113,7 @@ double levinson(double *t, double *y, long n) {
   for (int i = 0; i < n; i++) {
     fprintf(stdout, "x[%d] = %f\n", i, x[i]);
   }
+  fprintf(stderr, "Tempo in media: %10.10lf Iterazioni: %d\n", ((double) elapsed / (double) iterations), iterations);
   //ENDTEST
   free(f), f = NULL;
   free(b), b = NULL;
