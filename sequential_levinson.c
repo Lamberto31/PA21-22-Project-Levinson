@@ -23,6 +23,7 @@ int main(int argc, char const *argv[]) {
 
   srand(time(NULL));
   while (!t[n-1]) {
+    //TODO: controllare anche se tutti uguali???
     random_vector_generator(2*n-1, t, MAX_VALUE);
   }
   random_vector_generator(n, y, MAX_VALUE);
@@ -67,7 +68,7 @@ double levinson(double *t, double *y, long n) {
   x = (double *) calloc(n, sizeof(double));
 
   elapsed = -clock();
-  //TODO INIZIALIZZARE VETTORI DATO CHE DOPO LA PRIMA ITERAZIONE SONO PIENI
+  //TODO: inizializzare vettori dato che dopo la prima iterazione sono pieni
   for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
     //CASO BASE
     f[0] = 1/t[n-1];
