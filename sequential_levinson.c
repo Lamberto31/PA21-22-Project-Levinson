@@ -79,8 +79,9 @@ double levinson(double *t, double *y, long n){
       b[n-1-it+i] = b_temp;
 
       x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
-
     }
   }
-  
+  for (int i = 0; i < n; i++) {
+    fprintf(stdout, "x[%d]=%f\n", i, x[i]);
+  }
 }
