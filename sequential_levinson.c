@@ -31,6 +31,9 @@ double levinson(double *t, double *y, long n){
   double alpha_b;
   double beta_b;
 
+  //Variabili necessarie per aggiornamento f e b contemporaneo
+  double f_temp;
+  double b_temp;
 
   f = (double *) calloc(n, sizeof(double));
   b = (double *) calloc(n, sizeof(double));
@@ -38,22 +41,19 @@ double levinson(double *t, double *y, long n){
 
   //CASO BASE
   f[0] = 1/t[n-1];
-  b[0] = 1/t[n-1];
+  b[n-1] = 1/t[n-1];
   x[0] = y[0]/t[n-1];
 
   for (int it = 1; it < n; it++) {
-    f[it] = 0;
-    b[it] = 0;
-    x[it] = 0;
 
     e_f = 0;
     e_b = 0;
     e_x = 0;
 
-    for (int i = 0; i < it-1; i++) {
-      e_f = e_f + t[it-i+it] * f[i];
-      e_b = e_b + t[-i+it] * b[i];
-      e_x = e_x + t[it-i+it] * f[i];
+    for (int i = 0; i < it; i++) {
+      e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
+      e_b = e_b + t[-(i+1)+n-1] * b[n-1-it+1+i];
+      e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
     }
 
     d = 1 - (e_f * e_b);
@@ -62,10 +62,16 @@ double levinson(double *t, double *y, long n){
     alpha_b = -e_b/d;
     beta_b = 1/d;
 
-    for (int i = 0; i < it; i++) {
-      f[i] = alpha_f * f[i] + beta_f * b[i];
-      b[i] = alpha_b * f[i] + beta_b * b[i];
-      x[i] = x[i] - ((y[it] - e_x) * b[i]);
+    for (int i = 0; i < it+1; i++) {
+
+      f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
+      b_temp = alpha_b * f[i] + beta_b * b[n-1-it+i];
+
+      f[i] = f_temp;
+      b[n-1-it+i] = b_temp;
+
+      x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
+
     }
   }
   
