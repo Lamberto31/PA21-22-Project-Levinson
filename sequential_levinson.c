@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define MAX_VALUE 100
-#define LOOP_COUNT 10
+#define LOOP_COUNT 1000
 
 double levinson(double*, double*, long);
 void random_vector_generator(long, double*, int);
@@ -24,7 +24,7 @@ int main(int argc, char const *argv[]) {
 
   srand(time(NULL));
   while (!t[n-1]) {
-    //TODO: controllare anche se tutti uguali???
+    //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
     random_vector_generator(2*n-1, t, MAX_VALUE);
   }
   random_vector_generator(n, y, MAX_VALUE);
@@ -110,15 +110,15 @@ double levinson(double *t, double *y, long n) {
   elapsed += clock();
   //TEST
   for (int i = 0; i < 2*n-1; i++) {
-    fprintf(stdout, "t[%d] = %f\n", i, t[i]);
+    fprintf(stdout, "t[%d] = %10.10lf\n", i, t[i]);
   }
   for (int i = 0; i < n; i++) {
-    fprintf(stdout, "y[%d] = %f\n", i, y[i]);
+    fprintf(stdout, "y[%d] = %10.10lf\n", i, y[i]);
   }
   for (int i = 0; i < n; i++) {
-    fprintf(stdout, "x[%d] = %f\n", i, x[i]);
+    fprintf(stdout, "x[%d] = %10.10lf\n", i, x[i]);
   }
-  fprintf(stderr, "Tempo in media: %10.10lf Iterazioni: %d\n", ((double) elapsed / (double) iterations), iterations);
+  fprintf(stderr, "Tempo medio: %10.10lf Iterazioni: %d\n", ((double) elapsed / (double) iterations), iterations);
   //ENDTEST
   free(f), f = NULL;
   free(b), b = NULL;
