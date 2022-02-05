@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
-#define MAX_VALUE 10
+#define MAX_VALUE 100
 #define LOOP_COUNT 10
 
 double levinson(double*, double*, long);
@@ -68,8 +69,11 @@ double levinson(double *t, double *y, long n) {
   x = (double *) calloc(n, sizeof(double));
 
   elapsed = -clock();
-  //TODO: inizializzare vettori dato che dopo la prima iterazione sono pieni
   for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
+
+    memset(f, 0, n*sizeof(double));
+    memset(b, 0, n*sizeof(double));
+    memset(x, 0, n*sizeof(double));
     //CASO BASE
     f[0] = 1/t[n-1];
     b[n-1] = 1/t[n-1];
