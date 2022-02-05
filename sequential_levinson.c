@@ -25,6 +25,8 @@ int main(int argc, char const *argv[]) {
   random_vector_generator(n, y, 100);
 
   levinson(t, y, n);
+  free(t), t = NULL;
+  free(y), y = NULL;
   return 0;
 }
 
@@ -98,6 +100,9 @@ double levinson(double *t, double *y, long n) {
   for (int i = 0; i < n; i++) {
     fprintf(stdout, "x[%d] = %f\n", i, x[i]);
   }
+  free(f), f = NULL;
+  free(b), b = NULL;
+  free(x), x = NULL;
 }
 
 void random_vector_generator(long n, double *v, int max) {
