@@ -6,6 +6,14 @@
 double levinson(double*, double*, long);
 
 int main(int argc, char const *argv[]) {
+  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
+  double y[] = { 1, 2, 3,4};
+  double n = 4;
+  /*double t[] = { 2, 1, 3 };
+  double y[] = { 1, 2};
+  double n = 2;*/
+
+  levinson(t, y, n);
   return 0;
 }
 
