@@ -39,9 +39,8 @@ double levinson(double *t, double *y, long n){
   double alpha_b;
   double beta_b;
 
-  //Variabili necessarie per aggiornamento f e b contemporaneo
+  //Variabile temporanea per poter aggiornare b usando f
   double f_temp;
-  double b_temp;
 
   f = (double *) calloc(n, sizeof(double));
   b = (double *) calloc(n, sizeof(double));
@@ -73,10 +72,8 @@ double levinson(double *t, double *y, long n){
     for (int i = 0; i < it+1; i++) {
 
       f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
-      b_temp = alpha_b * f[i] + beta_b * b[n-1-it+i];
-
+      b[n-1-it+i] = alpha_b * f[i] + beta_b * b[n-1-it+i];
       f[i] = f_temp;
-      b[n-1-it+i] = b_temp;
 
       x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
     }
