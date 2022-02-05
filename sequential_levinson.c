@@ -1,19 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LOOP_COUNT = 1
+#define LOOP_COUNT 1
+#define N 4
 
 double levinson(double*, double*, long);
+void random_vector_generator(long, double*);
 
 int main(int argc, char const *argv[]) {
-  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
+  /*double t[] = { 6, 4, 2, 1, 3, 5, 7 };
   double y[] = { 1, 2, 3,4};
-  double n = 4;
+  double n = 4;*/
   /*double t[] = { 2, 1, 3 };
   double y[] = { 1, 2};
   double n = 2;*/
 
-  levinson(t, y, n);
+  double t[N];
+  double y[N];
+
+  srand(time(NULL));
+  random_vector_generator(2*N-1, &t);
+  random_vector_generator(N, &y);
+
+  levinson(t, y, N);
   return 0;
 }
 
@@ -78,7 +87,19 @@ double levinson(double *t, double *y, long n){
       x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
     }
   }
+  for (int i = 0; i < 2*N-1; i++) {
+    fprintf(stdout, "t[%d] = %f\n", i, t[i]);
+  }
+  for (int i = 0; i < N; i++) {
+    fprintf(stdout, "y[%d] = %f\n", i, y[i]);
+  }
   for (int i = 0; i < n; i++) {
     fprintf(stdout, "x[%d]=%f\n", i, x[i]);
+  }
+}
+
+void random_vector_generator(long n, double *v) {
+  for (long i = 0; i < n; i++) {
+    v[i] = rand() % 100;
   }
 }
