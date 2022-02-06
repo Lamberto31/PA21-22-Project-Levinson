@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
   //Result print
   //TEST
   if(!id){
-    for (int i = 0; i < 2*n-1; i++) {
+    for (int i = 0; i < t_size; i++) {
       fprintf(stdout, "t[%d] = %10.10lf\n", i, t[i]);
     }
     for (int i = 0; i < n; i++) {
