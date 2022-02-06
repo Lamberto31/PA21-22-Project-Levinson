@@ -87,7 +87,7 @@ double levinson(double *t, double *y, long n) {
 
       for (int i = 0; i < it; i++) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-        e_b = e_b + t[n-1-it+i] * b[i];
+        e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
 
@@ -98,7 +98,6 @@ double levinson(double *t, double *y, long n) {
       beta_b = 1/d;
 
       for (int i = 0; i < it+1; i++) {
-
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
         b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
