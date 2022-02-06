@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(MPI_COMM_WORLD);
 
       //Correctors computation (check to avoid useless work)
-      if (id > it+1) {
+      if (id < it) {
         d = 1 - (e_f * e_b);
         alpha_f = 1/d;
         beta_f = -e_f/d;
