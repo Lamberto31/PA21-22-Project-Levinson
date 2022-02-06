@@ -16,22 +16,28 @@ int main(int argc, char const *argv[]) {
     return -1;
   }
   long n = strtol(argv[1], NULL, 10);
-  double *t;
-  double *y;
+  //double *t;
+  //double *y;
 
-  t = (double *) calloc(2*n-1, sizeof(double));
-  y = (double *) calloc(n, sizeof(double));
+  //t = (double *) calloc(2*n-1, sizeof(double));
+  //y = (double *) calloc(n, sizeof(double));
 
-  srand(time(NULL));
+  /*srand(time(NULL));
   while (!t[n-1]) {
     //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
     random_vector_generator(2*n-1, t, MAX_VALUE);
   }
-  random_vector_generator(n, y, MAX_VALUE);
+  random_vector_generator(n, y, MAX_VALUE);*/
+  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
+  double y[] = { 1, 2, 3,4};
+  n = 4;
+  /*double t[] = { 2, 1, 3 };
+  double y[] = { 1, 2};
+  double n = 2;*/
 
   levinson(t, y, n);
-  free(t), t = NULL;
-  free(y), y = NULL;
+  //free(t), t = NULL;
+  //free(y), y = NULL;
   return 0;
 }
 
@@ -76,7 +82,7 @@ double levinson(double *t, double *y, long n) {
     memset(x, 0, n*sizeof(double));
     //CASO BASE
     f[0] = 1/t[n-1];
-    b[n-1] = 1/t[n-1];
+    b[0] = 1/t[n-1];
     x[0] = y[0]/t[n-1];
 
     for (int it = 1; it < n; it++) {
@@ -87,7 +93,7 @@ double levinson(double *t, double *y, long n) {
 
       for (int i = 0; i < it; i++) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-        e_b = e_b + t[-(i+1)+n-1] * b[n-it+i];
+        e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
 
@@ -98,12 +104,11 @@ double levinson(double *t, double *y, long n) {
       beta_b = 1/d;
 
       for (int i = 0; i < it+1; i++) {
-
-        f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
-        b[n-1-it+i] = alpha_b * f[i] + beta_b * b[n-1-it+i];
+        f_temp = alpha_f * f[i] + beta_f * b[it-i];
+        b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
 
-        x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
+        x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
       }
     }
   }
@@ -127,6 +132,7 @@ double levinson(double *t, double *y, long n) {
 
 void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
-    v[i] = rand() % (max+1);
+    //v[i] = rand() % (max+1);
+    v[i] = i+1;
   }
 }
