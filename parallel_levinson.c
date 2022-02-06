@@ -147,12 +147,11 @@ int main(int argc, char *argv[]) {
 
     //Begin of the algorithm iterations
     for (it = 1; it < n; it++) {
-
       //Errors initialization and computation
       e_f = 0;
       e_b = 0;
       e_x = 0;
-      for (long i = p; i < it; i+p) {
+      for (long i = id; i < it; i+=p) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
@@ -171,13 +170,14 @@ int main(int argc, char *argv[]) {
       }
 
       //Vectors update
-      for (long i = p; i < it+1; i+p) {
+      for (long i = id; i < it+1; i+=p) {
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
         b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
         x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
       }
     }
+
     //TODO GATHER
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
   //Stop the timer
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time = -MPI_Wtime();
-
+  
   //Result print
   //TEST
   if(!id){
