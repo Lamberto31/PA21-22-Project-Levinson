@@ -184,8 +184,8 @@ int main(int argc, char *argv[]) {
 
   //Stop the timer
 	MPI_Barrier(MPI_COMM_WORLD);
-  elapsed_time = -MPI_Wtime();
-  
+  elapsed_time += MPI_Wtime();
+
   //Result print
   //TEST
   if(!id){
