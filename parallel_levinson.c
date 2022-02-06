@@ -94,10 +94,12 @@ int main(int argc, char *argv[]) {
   double y[] = { 1, 2, 3,4};
 
   srand(time(NULL));
-  while (!t[n-1]) {
+  //TODO: capire come controllare t0
+  /*while (!t[n-1]) {
     //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
     random_vector_generator(t_size, t, MAX_VALUE);
-  }
+  }*/
+  random_vector_generator(t_size, t, MAX_VALUE);
   //random_vector_generator(n, y, MAX_VALUE);
   //ENDTEST
 
