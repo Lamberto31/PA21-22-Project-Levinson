@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
   srand(time(NULL));
   while (!t[n-1]) {
     //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
-    random_vector_generator(2*n-1, t, MAX_VALUE);
+    random_vector_generator(t_size, t, MAX_VALUE);
   }
   //random_vector_generator(n, y, MAX_VALUE);
   //ENDTEST
