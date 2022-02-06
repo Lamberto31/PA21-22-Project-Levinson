@@ -16,22 +16,28 @@ int main(int argc, char const *argv[]) {
     return -1;
   }
   long n = strtol(argv[1], NULL, 10);
-  double *t;
-  double *y;
+  //double *t;
+  //double *y;
 
-  t = (double *) calloc(2*n-1, sizeof(double));
-  y = (double *) calloc(n, sizeof(double));
+  //t = (double *) calloc(2*n-1, sizeof(double));
+  //y = (double *) calloc(n, sizeof(double));
 
-  srand(time(NULL));
+  /*srand(time(NULL));
   while (!t[n-1]) {
     //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
     random_vector_generator(2*n-1, t, MAX_VALUE);
   }
-  random_vector_generator(n, y, MAX_VALUE);
+  random_vector_generator(n, y, MAX_VALUE);*/
+  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
+  double y[] = { 1, 2, 3,4};
+  n = 4;
+  /*double t[] = { 2, 1, 3 };
+  double y[] = { 1, 2};
+  double n = 2;*/
 
   levinson(t, y, n);
-  free(t), t = NULL;
-  free(y), y = NULL;
+  //free(t), t = NULL;
+  //free(y), y = NULL;
   return 0;
 }
 
@@ -126,6 +132,7 @@ double levinson(double *t, double *y, long n) {
 
 void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
-    v[i] = rand() % (max+1);
+    //v[i] = rand() % (max+1);
+    v[i] = i+1;
   }
 }
