@@ -76,7 +76,7 @@ double levinson(double *t, double *y, long n) {
     memset(x, 0, n*sizeof(double));
     //CASO BASE
     f[0] = 1/t[n-1];
-    b[n-1] = 1/t[n-1];
+    b[0] = 1/t[n-1];
     x[0] = y[0]/t[n-1];
 
     for (int it = 1; it < n; it++) {
@@ -87,7 +87,7 @@ double levinson(double *t, double *y, long n) {
 
       for (int i = 0; i < it; i++) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-        e_b = e_b + t[-(i+1)+n-1] * b[n-it+i];
+        e_b = e_b + t[-(i+1)+n-1] * b[it-1-i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
 
@@ -99,11 +99,11 @@ double levinson(double *t, double *y, long n) {
 
       for (int i = 0; i < it+1; i++) {
 
-        f_temp = alpha_f * f[i] + beta_f * b[n-1-it+i];
-        b[n-1-it+i] = alpha_b * f[i] + beta_b * b[n-1-it+i];
+        f_temp = alpha_f * f[i] + beta_f * b[it-i];
+        b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
 
-        x[i] = x[i] + ((y[it] - e_x) * b[n-1-it+i]);
+        x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
       }
     }
   }
