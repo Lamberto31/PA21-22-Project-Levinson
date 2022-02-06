@@ -131,9 +131,12 @@ int main(int argc, char *argv[]) {
   for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
 
     //Vectors reset necessary due to repeated iterations
-    memset(f, 0, n*sizeof(double));
-    memset(b, 0, n*sizeof(double));
-    memset(x, 0, n*sizeof(double));
+    memset(f, 0, vectors_size*sizeof(double));
+    memset(b, 0, vectors_size*sizeof(double));
+    if(!id)
+      memset(x, 0, n*sizeof(double));
+    else
+      memset(x, 0, vectors_size*sizeof(double));
 
     //Base case done just by process 0
     if(!id) {
