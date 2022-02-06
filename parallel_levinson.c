@@ -4,8 +4,8 @@
 #include <string.h>
 #include <mpi.h>
 
-#define MAX_VALUE 100
-#define LOOP_COUNT 1000
+#define MAX_VALUE 10
+#define LOOP_COUNT 1
 
 double levinson(double*, double*, long);
 void random_vector_generator(long, double*, int);
@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
+      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, e_f, e_b, e_x);
 
       //TODO ALL-REDUCE
       MPI_Barrier(MPI_COMM_WORLD);
@@ -168,9 +169,11 @@ int main(int argc, char *argv[]) {
         alpha_b = -e_b/d;
         beta_b = 1/d;
       }
+      fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
 
       //Vectors update
       for (long i = id; i < it+1; i+=p) {
+        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\n\n", it, id, i, p);
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
         b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
@@ -217,7 +220,7 @@ int main(int argc, char *argv[]) {
 
 void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
-    //v[i] = rand() % (max+1);
-    v[i] = i+1;
+    v[i] = rand() % (max+1);
+    //v[i] = i+1;
   }
 }
