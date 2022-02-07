@@ -110,29 +110,25 @@ int main(int argc, char *argv[]) {
 
   //Decomposition
   vectors_size=n/p;
-  t_size=2*vectors_size;
+  t_size=2*vectors_size-1;
 
-  //Input
-  //TODO: Qui intorno dovrò gestire la lettura dell'input
-  /*      Per simularla bene probabilmente dovrei far generare tutto a p0
-          Poi lui dovrebbe distribuire tutto in modo consono (interleaved)
-
-  */
-  //TEST
+  //Input distribution
   t = (double *) calloc(t_size, sizeof(double));
-  //TODO Capire come gestire y uguale per tutti
-  //y = (double *) calloc(n, sizeof(double));
-  double y[] = { 1, 2, 3,4};
+  if(!t){
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+  if(id){
+    y = (double *) calloc(n, sizeof(double));
+    if(!y){
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+  }
 
-  srand(time(NULL));
-  //TODO: capire come controllare t0
-  /*while (!t[n-1]) {
-    //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
-    random_vector_generator(t_size, t, MAX_VALUE);
-  }*/
-  random_vector_generator(t_size, t, MAX_VALUE);
-  //random_vector_generator(n, y, MAX_VALUE);
-  //ENDTEST
+  MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+
 
   //Vectors initialization
   f = (double *) calloc(vectors_size, sizeof(double));
