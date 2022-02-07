@@ -19,9 +19,10 @@ int main(int argc, char *argv[]) {
 
   //Input
   long n;
+  double *y;
+  double *t_full;
+  double t_0;
   double *t;
-  //TODO Capire come gestire y uguale per tutti
-  //double *y;
   //TEST
   /*
   long n = 4;
@@ -82,11 +83,41 @@ int main(int argc, char *argv[]) {
   else
     loop_count = LOOP_COUNT;
 
+  //Input reading made by p0
+  //TEST: per ora gestita con generazione random;
+  if(!id) {
+    t_full = (double *) calloc(2*n-1, sizeof(double));
+    if(!t_full){
+        fprintf(stderr, "Processor %d: Not enough memory\n", id);
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    y = (double *) calloc(n, sizeof(double));
+    if(!y){
+        fprintf(stderr, "Processor %d: Not enough memory\n", id);
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    srand(time(NULL));
+    while (!t[n-1]) {
+      //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
+      random_vector_generator(2*n-1, t_full, MAX_VALUE);
+    }
+    t_0 = t[n-1];
+    random_vector_generator(n, y, MAX_VALUE);
+  }
+  //ENDTEST
+
   //Decomposition
   vectors_size=n/p;
   t_size=2*vectors_size;
 
   //Input
+  //TODO: Qui intorno dovrò gestire la lettura dell'input
+  /*      Per simularla bene probabilmente dovrei far generare tutto a p0
+          Poi lui dovrebbe distribuire tutto in modo consono (interleaved)
+
+  */
   //TEST
   t = (double *) calloc(t_size, sizeof(double));
   //TODO Capire come gestire y uguale per tutti
