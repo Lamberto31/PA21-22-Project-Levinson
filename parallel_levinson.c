@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
   //ENDTEST
 
   //Decomposition
+  //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
   vectors_size=n/p;
   t_size=2*vectors_size-1;
 
@@ -178,6 +179,7 @@ int main(int argc, char *argv[]) {
       e_f = 0;
       e_b = 0;
       e_x = 0;
+      //TODO: Correggere, ogni processo avrà la parte di vettore utile, non tutto, probabilmente il for sarà come sequenziale
       for (long i = id; i < it; i+=p) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
@@ -189,6 +191,7 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(MPI_COMM_WORLD);
 
       //Correctors computation (check to avoid useless work)
+      //TODO: Correggere, ogni processo avrà la parte di vettore utile, non tutto, probabilmente il for sarà come sequenziale
       if (id < it) {
         d = 1 - (e_f * e_b);
         alpha_f = 1/d;
@@ -199,6 +202,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
 
       //Vectors update
+      //TODO: Correggere, ogni processo avrà la parte di vettore utile, non tutto, probabilmente il for sarà come sequenziale
       for (long i = id; i < it+1; i+=p) {
         fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\n\n", it, id, i, p);
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
