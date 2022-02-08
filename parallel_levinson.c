@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
       errors[2] = e_x;
 
       //Reduction
-      //MPI_Allreduce(&errors, &global_errors, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&errors, &global_errors, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
       //Correctors computation (check to avoid useless work)
       if (id < it) {
@@ -238,8 +238,9 @@ int main(int argc, char *argv[]) {
 
   //Result print
   //TEST
+
   if(!id){
-    for (int i = 0; i < t_size; i++) {
+    for (int i = 0; i < 2*n-1; i++) {
       fprintf(stdout, "t[%d] = %10.10lf\n", i, t[i]);
     }
     for (int i = 0; i < n; i++) {
@@ -251,6 +252,7 @@ int main(int argc, char *argv[]) {
     //TODO calcolo max_time con reduce;
     fprintf(stderr, "Tempo medio: %10.10lf Iterazioni: %d\n", ((double) elapsed_time / (double) iterations), iterations);
   }
+
   //ENDTEST
 
   //Memory release and finalize
