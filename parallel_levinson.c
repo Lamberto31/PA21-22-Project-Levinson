@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   //Decomposition
   //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
   vectors_size=n/p;
-  t_size=2*vectors_size-1;
+  t_size=(2*n-1)/p;
 
   //Input distribution
   t = (double *) calloc(t_size, sizeof(double));
