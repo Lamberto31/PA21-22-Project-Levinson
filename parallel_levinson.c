@@ -35,6 +35,15 @@ int main(int argc, char *argv[]) {
   long vectors_size;
   long t_size;
 
+  //Custom Datatype
+  long count;
+  int blocklength;
+  int k_r0;
+  int *displacements_left;
+  int *displacements_right;
+  MPI_Datatype interleaved_t_left;
+  MPI_Datatype interleaved_t_right;
+
   //Vectors
   double *f;
   double *b;
@@ -113,6 +122,44 @@ int main(int argc, char *argv[]) {
   vectors_size=n/p;
   t_size=(2*n-1)/p;
 
+  //Custom Datatype
+  count = t_size;
+  blocklength = 1;
+
+  displacements_left = malloc(sizeof(int)*count);
+  displacements_right = malloc(sizeof(int)*count);
+
+  k_r0 = ((n-1)-((n-1)%p))/p;
+  for (int i = 0; i < count; i++) {
+    if (i < k_r0) {
+      displacements_left[i] = i*p;
+      displacements_right[i] = i*p;
+    }
+    else if (i == k_r0) {
+      displacements_left[i] = i*p;
+      displacements_right[i] = i*p+1;
+    }
+    else {
+      displacements_left[i] = i*p+1;
+      displacements_right[i] = i*p+1;
+    }
+  }
+
+  MPI_Type_create_indexed_block(count, blocklength, displacements_left, MPI_FLOAT, &interleaved_t_left);
+  MPI_Type_commit(&interleaved_t_left);
+
+  MPI_Type_create_indexed_block(count, blocklength, displacements_right, MPI_FLOAT, &interleaved_t_right);
+  MPI_Type_commit(&interleaved_t_right);
+
+  //TEST
+  if(!id) {
+    for (int i = 0; i < t_size; i++) {
+      fprintf(stdout, "displacements_left[%d] =  %d\n", i, displacements_left[i]);
+      fprintf(stdout, "displacements_right[%d] =  %d\n", i, displacements_right[i]);
+    }
+  }
+  //ENDTEST
+
   //Input distribution
   t = (double *) calloc(t_size, sizeof(double));
   if(!t){
@@ -127,11 +174,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  //Input scattering
+  MPI_Scatter(t_full, 1, interleaved_t_left, t, 1, interleaved_t_left, id, MPI_COMM_WORLD);
+
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 
-
   //Vectors initialization
+  /*
   f = (double *) calloc(vectors_size, sizeof(double));
   if(!f){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -241,7 +291,7 @@ int main(int argc, char *argv[]) {
   free(f), f = NULL;
   free(b), b = NULL;
   free(x), x = NULL;
-
+*/
   free(t), t = NULL;
   //free(y), y = NULL;
 
