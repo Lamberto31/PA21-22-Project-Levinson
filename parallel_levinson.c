@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
   }
 
   //Input broadcasting
-  MPI_Bcast(t, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(t, 2*n-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 
