@@ -145,10 +145,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  MPI_Type_create_indexed_block(count, blocklength, displacements_left, MPI_FLOAT, &interleaved_t_left);
+  MPI_Type_create_indexed_block(count, blocklength, displacements_left, MPI_DOUBLE, &interleaved_t_left);
   MPI_Type_commit(&interleaved_t_left);
 
-  MPI_Type_create_indexed_block(count, blocklength, displacements_right, MPI_FLOAT, &interleaved_t_right);
+  MPI_Type_create_indexed_block(count, blocklength, displacements_right, MPI_DOUBLE, &interleaved_t_right);
   MPI_Type_commit(&interleaved_t_right);
 
   //TEST
