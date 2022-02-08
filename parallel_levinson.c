@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
   double *f;
   double *b;
   double *x;
+  double *x_res;
 
   //Iteration idx
   long it;
@@ -95,7 +96,7 @@ int main(int argc, char *argv[]) {
   //Input reading made by p0
   //TEST: per ora gestita con generazione random;
   if(!id) {
-    t_full = (double *) calloc(2*n-1, sizeof(double));
+    t = (double *) calloc(2*n-1, sizeof(double));
     if(!t_full){
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
@@ -120,53 +121,15 @@ int main(int argc, char *argv[]) {
   //Decomposition
   //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
   vectors_size=n/p;
-  t_size=(2*n-1)/p;
-
-  //Custom Datatype
-  count = t_size;
-  blocklength = 1;
-
-  displacements_left = malloc(sizeof(int)*count);
-  displacements_right = malloc(sizeof(int)*count);
-
-  k_r0 = ((n-1)-((n-1)%p))/p;
-  for (int i = 0; i < count; i++) {
-    if (i < k_r0) {
-      displacements_left[i] = i*p;
-      displacements_right[i] = i*p;
-    }
-    else if (i == k_r0) {
-      displacements_left[i] = i*p;
-      displacements_right[i] = i*p+1;
-    }
-    else {
-      displacements_left[i] = i*p+1;
-      displacements_right[i] = i*p+1;
-    }
-  }
-
-  MPI_Type_create_indexed_block(count, blocklength, displacements_left, MPI_DOUBLE, &interleaved_t_left);
-  MPI_Type_commit(&interleaved_t_left);
-
-  MPI_Type_create_indexed_block(count, blocklength, displacements_right, MPI_DOUBLE, &interleaved_t_right);
-  MPI_Type_commit(&interleaved_t_right);
-
-  //TEST
-  if(!id) {
-    for (int i = 0; i < t_size; i++) {
-      fprintf(stdout, "displacements_left[%d] =  %d\n", i, displacements_left[i]);
-      fprintf(stdout, "displacements_right[%d] =  %d\n", i, displacements_right[i]);
-    }
-  }
-  //ENDTEST
 
   //Input distribution
-  t = (double *) calloc(t_size, sizeof(double));
-  if(!t){
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
   if(id){
+    t = (double *) calloc(2*n-1, sizeof(double));
+    if(!t){
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
     y = (double *) calloc(n, sizeof(double));
     if(!y){
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -174,14 +137,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  //Input scattering
-  MPI_Scatter(t_full, 1, interleaved_t_left, t, 1, interleaved_t_left, id, MPI_COMM_WORLD);
-
+  //Input broadcasting
+  MPI_Bcast(t, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 
   //Vectors initialization
-  /*
+
   f = (double *) calloc(vectors_size, sizeof(double));
   if(!f){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -192,13 +154,17 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
-  if(!id)
-    x = (double *) calloc(n, sizeof(double));
-  else
-    x = (double *) calloc(vectors_size, sizeof(double));
+  x = (double *) calloc(vectors_size, sizeof(double));
   if(!x){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+  if(!id) {
+    x_res = (double *) calloc(n, sizeof(double));
+  if(!xres){
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+    }
   }
 
   //Start the timer
@@ -211,10 +177,7 @@ int main(int argc, char *argv[]) {
     //Vectors reset necessary due to repeated iterations
     memset(f, 0, vectors_size*sizeof(double));
     memset(b, 0, vectors_size*sizeof(double));
-    if(!id)
-      memset(x, 0, n*sizeof(double));
-    else
-      memset(x, 0, vectors_size*sizeof(double));
+    memset(x, 0, vectors_size*sizeof(double));
 
     //Base case done just by process 0
     if(!id) {
@@ -229,7 +192,7 @@ int main(int argc, char *argv[]) {
       e_f = 0;
       e_b = 0;
       e_x = 0;
-      //TODO: Correggere, ogni processo avrà la parte di vettore utile, non tutto, probabilmente il for sarà come sequenziale
+
       for (long i = id; i < it; i+=p) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
@@ -250,6 +213,8 @@ int main(int argc, char *argv[]) {
         beta_b = 1/d;
       }
       fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
+
+      //TODO REDUCE
 
       //Vectors update
       //TODO: Correggere, ogni processo avrà la parte di vettore utile, non tutto, probabilmente il for sarà come sequenziale
@@ -291,7 +256,7 @@ int main(int argc, char *argv[]) {
   free(f), f = NULL;
   free(b), b = NULL;
   free(x), x = NULL;
-*/
+
   free(t), t = NULL;
   //free(y), y = NULL;
 
