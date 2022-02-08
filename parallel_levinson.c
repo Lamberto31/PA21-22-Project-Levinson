@@ -198,8 +198,8 @@ int main(int argc, char *argv[]) {
         e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
+        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, id, i, p, e_f, e_b, e_x);
       }
-      //TESTfprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, e_f, e_b, e_x);
 
       errors[0] = e_f;
       errors[1] = e_b;
@@ -207,6 +207,7 @@ int main(int argc, char *argv[]) {
 
       //Reduction
       MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
 
       //Correctors computation (check to avoid useless work)
       if (id < it) {
@@ -216,15 +217,15 @@ int main(int argc, char *argv[]) {
         alpha_b = -e_b/d;
         beta_b = 1/d;
       }
-      fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
+      //fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
 
       //Vectors update
       for (long i = id; i < it+1; i+=p) {
-        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\n\n", it, id, i, p);
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
         b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
         x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
+        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
 
