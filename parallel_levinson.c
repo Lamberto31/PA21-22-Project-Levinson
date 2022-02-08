@@ -199,14 +199,14 @@ int main(int argc, char *argv[]) {
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
-      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, e_f, e_b, e_x);
+      //TESTfprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, e_f, e_b, e_x);
 
       errors[0] = e_f;
       errors[1] = e_b;
       errors[2] = e_x;
 
       //Reduction
-      MPI_Allreduce(&errors, &global_errors, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
       //Correctors computation (check to avoid useless work)
       if (id < it) {
