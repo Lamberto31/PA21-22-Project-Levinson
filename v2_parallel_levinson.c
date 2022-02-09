@@ -20,22 +20,15 @@ int main(int argc, char *argv[]) {
   //Input
   long n;
   double *y;
-  double *t_full;
-  double t_0;
   double *t;
-  //TEST
-  /*
-  long n = 4;
-  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
-  double y[] = { 1, 2, 3,4};
-  */
-  //ENDTEST
+  long t_size;
+  double t_0;
 
   //Decomposition
   long vectors_size;
-  long t_size;
 
   //Custom Datatype
+  //TODO Le lascio perchè forse serviranno
   long count;
   int blocklength;
   int k_r0;
@@ -66,6 +59,7 @@ int main(int argc, char *argv[]) {
   double beta_f;
   double alpha_b;
   double beta_b;
+  double beta_x;
 
   //Temp variable for safe update of b and f
   double f_temp;
@@ -90,6 +84,7 @@ int main(int argc, char *argv[]) {
     }
   }
   n = strtol(argv[1], NULL, 10);
+  t_size = (2*n)-1;
   if (argc == 3)
     loop_count = strtol(argv[2], NULL, 10);
   else
@@ -98,7 +93,7 @@ int main(int argc, char *argv[]) {
   //Input reading made by p0
   //TEST: per ora gestita con generazione random;
   if(!id) {
-    t = (double *) calloc(2*n-1, sizeof(double));
+    t = (double *) calloc(t_size, sizeof(double));
     if(!t){
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
@@ -113,7 +108,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     while (!t[n-1]) {
       //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
-      random_vector_generator(2*n-1, t, MAX_VALUE);
+      random_vector_generator(t_size, t, MAX_VALUE);
     }
     t_0 = t[n-1];
     random_vector_generator(n, y, MAX_VALUE);
@@ -140,7 +135,7 @@ int main(int argc, char *argv[]) {
   }
 
   //Input broadcasting
-  MPI_Bcast(t, 2*n-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 
@@ -183,9 +178,9 @@ int main(int argc, char *argv[]) {
 
     //Base case done just by process 0
     if(!id) {
-      f[0] = 1/t[n-1];
-      b[0] = 1/t[n-1];
-      x[0] = y[0]/t[n-1];
+      f[0] = 1/t_0;
+      b[0] = 1/t_0;
+      x[0] = y[0]/t_0;
     }
 
     //Begin of the algorithm iterations
