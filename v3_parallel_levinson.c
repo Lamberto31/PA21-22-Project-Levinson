@@ -28,6 +28,10 @@ int main(int argc, char *argv[]) {
 
   //Custom datatype
   MPI_Datatype interleaved_vector;
+  MPI_Aint start_address;
+  MPI_Aint address;
+  MPI_Aint lb;
+  MPI_Aint extent;
   MPI_Datatype interleaved_vector_resized;
 
   //Benchmark
@@ -84,7 +88,12 @@ int main(int argc, char *argv[]) {
   MPI_Type_vector(v_size, 1, p, MPI_DOUBLE, &interleaved_vector);
   MPI_Type_commit(&interleaved_vector);
 
-  MPI_Type_create_resized(interleaved_vector, 0, sizeof(double), &interleaved_vector_resized);
+  MPI_Get_address(&t[0], &start_address);
+  lb = MPI_Aint_diff(start_address, start_address);
+  MPI_Get_address(&t[1], &address);
+  extent = MPI_Aint_diff(address, start_address);
+
+  MPI_Type_create_resized(interleaved_vector, lb, extent, &interleaved_vector_resized);
   MPI_Type_commit(&interleaved_vector_resized);
 
   return 0;
