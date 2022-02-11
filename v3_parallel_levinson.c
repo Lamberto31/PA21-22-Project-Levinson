@@ -8,6 +8,9 @@
 #define LOOP_COUNT 1
 
 void random_vector_generator(long, double*, int);
+void vector_t_split(long, double*, double*, double*);
+void parallel_levinson(double*, double*, double*, double*, double*);
+
 int main(int argc, char *argv[]) {
 
   //VARIABLES
@@ -223,4 +226,14 @@ void random_vector_generator(long n, double *v, int max) {
     v[3] = 4;
   }
   //ENDTEST
+}
+
+void vector_t_split(long n, double *t, double *t_p, double *t_n) {
+  memcpy(t_n, t, n*sizeof(double)); //In reverse order
+  memcpy(t_p, &t[n], n*sizeof(double));
+  //TODO reverse???
+}
+
+void parallel_levinson(double *t, double *y, double *f, double *b, double *x) {
+
 }
