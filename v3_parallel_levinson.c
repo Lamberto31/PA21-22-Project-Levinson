@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
   double *x_res;
 
   //Benchmark
+  double elapsed_time;
+  double max_time;
+  int iterations;
   int loop_count;
 
   //MPI Initialization
@@ -153,6 +156,46 @@ int main(int argc, char *argv[]) {
     MPI_Abort(MPI_COMM_WORLD, -1);
     }
   }
+
+  //Start the timer
+	MPI_Barrier(MPI_COMM_WORLD);
+  elapsed_time = -MPI_Wtime();
+
+  //Begin the iterations
+  for(iterations = 0; iterations < loop_count; iterations++) {
+
+    //Vectors reset necessary due to repeated iterations
+    memset(f, 0, v_size*sizeof(double));
+    memset(b, 0, v_size*sizeof(double));
+    memset(buf, 0, v_size*sizeof(double));
+    memset(x, 0, v_size*sizeof(double));
+    if(!id)
+    memset(x_res, 0, xres_size*sizeof(double));
+
+    //TODO ALGORITHM
+
+  }
+
+  //Stop the timer
+	MPI_Barrier(MPI_COMM_WORLD);
+  elapsed_time += MPI_Wtime();
+
+  //Memory release and finalize
+  free(t), t = NULL;
+  free(y), y = NULL;
+
+  free(f), f = NULL;
+  free(b), b = NULL;
+  free(buf), buf = NULL;
+  free(x), x = NULL;
+
+  if(!id)
+    free(x_res), x_res = NULL;
+
+  MPI_Type_free(&interleaved_vector);
+  MPI_Type_free(&interleaved_vector_resized);
+
+  MPI_Finalize();
 
   return 0;
 }
