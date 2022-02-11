@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
   //Vectors
   double *f;
   double *b;
+  double *buf;
   double *x;
   double *x_res;
 
@@ -140,17 +141,22 @@ int main(int argc, char *argv[]) {
 
   //Vectors initialization
 
-  f = (double *) calloc(n, sizeof(double));
+  f = (double *) calloc(vectors_size, sizeof(double));
   if(!f){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
-  b = (double *) calloc(n, sizeof(double));
+  b = (double *) calloc(vectors_size, sizeof(double));
   if(!b){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
-  x = (double *) calloc(n, sizeof(double));
+  buf = (double *) calloc(vectors_size, sizeof(double));
+  if(!buf){
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+  x = (double *) calloc(vectors_size, sizeof(double));
   if(!x){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
@@ -219,8 +225,23 @@ int main(int argc, char *argv[]) {
       }
       //fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
 
-      //TODO Scambio vettore b
+      //Scambio vettore b
+      if (id < it+1) {
+        if (it+1 < p) {
+          ring_size = it+1;
+        } else {
+          ring_size = p;
+        }
+        memcpy(buf, b, b_size*sizeof(double));
+        if (id != 0)
+          MPI_Recv(b, b_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+        MPI_Send(buf, b_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+
+        if (id == 0)
+          MPI_Recv(b, b_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+      }
 
       //Vectors update
       for (long i = id; i < it_divided+1; i+=p) {
@@ -251,7 +272,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "y[%d] = %10.10lf\n", i, y[i]);
     }
     for (int i = 0; i < n; i++) {
-      fprintf(stdout, "x[%d] = %10.10lf\n", i, x[i]);
+      fprintf(stdout, "x_res[%d] = %10.10lf\n", i, x_res[i]);
     }
     //TODO calcolo max_time con reduce;
     fprintf(stderr, "Tempo medio: %10.10lf Iterazioni: %d\n", ((double) elapsed_time / (double) iterations), iterations);
