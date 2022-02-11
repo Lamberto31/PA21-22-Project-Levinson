@@ -60,12 +60,12 @@ int main(int argc, char *argv[]) {
   //TEST: Random generation
   if(!id) {
     t = (double *) calloc(t_size, sizeof(double));
-    if(!t){
+    if(!t) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
     y = (double *) calloc(n, sizeof(double));
-    if(!y){
+    if(!y) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
@@ -97,15 +97,15 @@ int main(int argc, char *argv[]) {
   MPI_Type_commit(&interleaved_vector_resized);
 
   //Input distribution
-  if(id){
+  if(id) {
     t = (double *) calloc(t_size, sizeof(double));
-    if(!t){
+    if(!t) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
     y = (double *) calloc(n, sizeof(double));
-    if(!y){
+    if(!y) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
