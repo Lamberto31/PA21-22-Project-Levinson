@@ -22,6 +22,10 @@ int main(int argc, char *argv[]) {
   double t_0;
   double *y;
 
+  //Decomposition
+  long v_size;
+  long xres_size;
+
   //Benchmark
   int loop_count;
 
@@ -67,6 +71,10 @@ int main(int argc, char *argv[]) {
     random_vector_generator(n, y, MAX_VALUE);
   }
   //ENDTEST
+
+  //Decomposition
+  v_size = n/p + (n%p !=0);   //Ceil
+  xres_size = v_size*p;
 
   return 0;
 }
