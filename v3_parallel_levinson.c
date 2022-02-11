@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
     loop_count = LOOP_COUNT;
 
   //Input reading made by p0
-  //TEST: Random generation
   if(!id) {
     t = (double *) calloc(t_size, sizeof(double));
     if(!t) {
@@ -79,7 +78,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
-
+    //TEST: Random generation
     srand(time(NULL));
     while(!t[n-1]) {
       //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
@@ -87,8 +86,9 @@ int main(int argc, char *argv[]) {
     }
     t_0 = t[n-1];
     random_vector_generator(n, y, MAX_VALUE);
+    //ENDTEST
   }
-  //ENDTEST
+
 
   //Decomposition
   v_size = n/p + (n%p !=0);   //Ceil
