@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
 
   //Iteration idx
   long it;
+  long it_divided;
 
   //Errors for each extension of vectors f, b, x
   double e_f;
@@ -183,11 +184,12 @@ int main(int argc, char *argv[]) {
 
     //Begin of the algorithm iterations
     for (it = 1; it < n; it++) {
+      it_divided = it/p + (it%p !=0);
       //Errors initialization and computation
       e_f = 0;
       e_b = 0;
       e_x = 0;
-      for (long i = id; i < it; i+=p) {
+      for (long i = id; i < it_divided; i+=p) {
         e_f = e_f + t[it-i+n-1+(id+i*p)] * f[i];
         e_b = e_b + t[i-it+n-1+(id+i*p) + ((it-1)%p)] * b[i];
         e_x = e_x + t[it-i+n-1+(id+i*p)] * x[i];
@@ -213,15 +215,19 @@ int main(int argc, char *argv[]) {
         beta_f = -e_f/d;
         alpha_b = -e_b/d;
         beta_b = 1/d;
+        beta_x = y[it] - e_x;
       }
       //fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
 
+      //TODO Scambio vettore b
+
+
       //Vectors update
-      for (long i = id; i < it+1; i+=p) {
+      for (long i = id; i < it_divided+1; i+=p) {
         f_temp = alpha_f * f[i] + beta_f * b[it-i];
         b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
         f[i] = f_temp;
-        x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
+        x[i] = x[i] + (beta_x * b[it-i]);
         fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
