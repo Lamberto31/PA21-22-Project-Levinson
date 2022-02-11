@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
 
   //Decomposition
   long vectors_size;
+  long full_size;
   int ring_size;
 
   //Custom Datatype
@@ -114,12 +115,13 @@ int main(int argc, char *argv[]) {
 
   //Decomposition
   vectors_size = n/p + (n%p !=0);
+  full_size = vectors_size*p;
 
   //Custom datatype for final gather
-  MPI_Type_vector(vectors_size, 1, p, MPI_INT, &interleaved_vector);
+  MPI_Type_vector(vectors_size, 1, p, MPI_DOUBLE, &interleaved_vector);
   MPI_Type_commit(&interleaved_vector);
 
-  MPI_Type_create_resized(interleaved_vector, 0, sizeof(int), &interleaved_vector_resized);
+  MPI_Type_create_resized(interleaved_vector, 0, sizeof(double), &interleaved_vector_resized);
   MPI_Type_commit(&interleaved_vector_resized);
 
   //Input distribution
@@ -141,7 +143,6 @@ int main(int argc, char *argv[]) {
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   //Vectors initialization
-
   f = (double *) calloc(vectors_size, sizeof(double));
   if(!f){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -163,7 +164,7 @@ int main(int argc, char *argv[]) {
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
   if(!id) {
-    x_res = (double *) calloc(n, sizeof(double));
+    x_res = (double *) calloc(full_size, sizeof(double));
   if(!x_res){
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
@@ -175,12 +176,12 @@ int main(int argc, char *argv[]) {
   elapsed_time = -MPI_Wtime();
 
   //Begin the iterations
-  for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
+  for(iterations = 0; iterations < loop_count; iterations++) {
 
     //Vectors reset necessary due to repeated iterations
-    memset(f, 0, n*sizeof(double));
-    memset(b, 0, n*sizeof(double));
-    memset(x, 0, n*sizeof(double));
+    memset(f, 0, vectors_size*sizeof(double));
+    memset(b, 0, vectors_size*sizeof(double));
+    memset(x, 0, vectors_size*sizeof(double));
 
     //Base case done just by process 0
     if(!id) {
@@ -192,11 +193,13 @@ int main(int argc, char *argv[]) {
     //Begin of the algorithm iterations
     for (it = 1; it < n; it++) {
       it_divided = it/p + (it%p !=0);
+      fprintf(stdout, "it_divided = %ld\n", it_divided);
       //Errors initialization and computation
       e_f = 0;
       e_b = 0;
       e_x = 0;
-      for (long i = id; i < it_divided; i+=p) {
+
+      for (long i = 0; i < it_divided; i++) {
         e_f = e_f + t[it-i+n-1+(id+i*p)] * f[i];
         e_b = e_b + t[i-it+n-1+(id+i*p) + ((it-1)%p)] * b[i];
         e_x = e_x + t[it-i+n-1+(id+i*p)] * x[i];
@@ -245,17 +248,17 @@ int main(int argc, char *argv[]) {
       }
 
       //Vectors update
-      for (long i = id; i < it_divided+1; i+=p) {
-        f_temp = alpha_f * f[i] + beta_f * b[it-i];
-        b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
+      for (long i = 0; i < it_divided+1; i++) {
+        f_temp = alpha_f * f[i] + beta_f * b[it_divided-i];
+        b[it_divided-i] = alpha_b * f[i] + beta_b * b[it_divided-i];
         f[i] = f_temp;
-        x[i] = x[i] + (beta_x * b[it-i]);
+        x[i] = x[i] + (beta_x * b[it_divided-i]);
         fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
 
     //GATHER
-    MPI_Gather(x, vectors_size, MPI_INT, x_res, 1, interleaved_vector_resized, 0, MPI_COMM_WORLD);
+    MPI_Gather(x, vectors_size, MPI_DOUBLE, x_res, 1, interleaved_vector_resized, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
@@ -267,7 +270,7 @@ int main(int argc, char *argv[]) {
   //TEST
 
   if(!id){
-    for (int i = 0; i < 2*n-1; i++) {
+    for (int i = 0; i < t_size; i++) {
       fprintf(stdout, "t[%d] = %10.10lf\n", i, t[i]);
     }
     for (int i = 0; i < n; i++) {
@@ -279,14 +282,15 @@ int main(int argc, char *argv[]) {
     //TODO calcolo max_time con reduce;
     fprintf(stderr, "Tempo medio: %10.10lf Iterazioni: %d\n", ((double) elapsed_time / (double) iterations), iterations);
   } else {
-    for (int i = 0; i < n; i++) {
-      fprintf(stdout, "x[%d] = %10.10lf\n", i, x[i]);
+    for (int i = 0; i < vectors_size; i++) {
+      fprintf(stdout, "CIAO x[%d] = %10.10lf\n", i, x[i]);
     }
   }
 
   //ENDTEST
 
   //Memory release and finalize
+
   free(f), f = NULL;
   free(b), b = NULL;
   free(x), x = NULL;
@@ -304,11 +308,11 @@ int main(int argc, char *argv[]) {
 }
 
 void random_vector_generator(long n, double *v, int max) {
-  /*for (long i = 0; i < n; i++) {
+  for (long i = 0; i < n; i++) {
     v[i] = rand() % (max+1);
     //v[i] = i+1;
   }
-  */
+
   //TEST
   if(n==7) {
     v[0] = 6;
