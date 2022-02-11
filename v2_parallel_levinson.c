@@ -137,7 +137,6 @@ int main(int argc, char *argv[]) {
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-
   //Vectors initialization
 
   f = (double *) calloc(n, sizeof(double));
@@ -189,9 +188,9 @@ int main(int argc, char *argv[]) {
       e_b = 0;
       e_x = 0;
       for (long i = id; i < it; i+=p) {
-        e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-        e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
-        e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
+        e_f = e_f + t[it-i+n-1+(id+i*p)] * f[i];
+        e_b = e_b + t[i-it+n-1+(id+i*p) + ((it-1)%p)] * b[i];
+        e_x = e_x + t[it-i+n-1+(id+i*p)] * x[i];
         fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, id, i, p, e_f, e_b, e_x);
       }
 
