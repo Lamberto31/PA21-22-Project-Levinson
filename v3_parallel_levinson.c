@@ -7,6 +7,91 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
+void random_vector_generator(long, double*, int);
 int main(int argc, char *argv[]) {
+
+  //VARIABLES
+  //Process handling
+  int id;
+  int p;
+
+  //Input
+  long n;
+  long t_size;
+  double *t;
+  double t_0;
+  double *y;
+
+  //Benchmark
+  int loop_count;
+
+  //MPI Initialization
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &id);
+  MPI_Comm_size(MPI_COMM_WORLD, &p);
+
+  //Input check
+  if (argc != 2 && argc != 3) {
+    if(!id) {
+      fprintf (stderr, "Usage: %s <n> [<loop count>]\nWhere:\n<n> is the order of the system of linear equation\n<loop_count> is the number of iterations wanted for benchmarking\n", argv[0]);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+  }
+  n = strtol(argv[1], NULL, 10);
+  t_size = (2*n)-1;
+  if (argc == 3)
+    loop_count = strtol(argv[2], NULL, 10);
+  else
+    loop_count = LOOP_COUNT;
+
+  //Input reading made by p0
+  //TEST: Random generation
+  if(!id) {
+    t = (double *) calloc(t_size, sizeof(double));
+    if(!t){
+        fprintf(stderr, "Processor %d: Not enough memory\n", id);
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+    y = (double *) calloc(n, sizeof(double));
+    if(!y){
+        fprintf(stderr, "Processor %d: Not enough memory\n", id);
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    srand(time(NULL));
+    while (!t[n-1]) {
+      //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
+      random_vector_generator(t_size, t, MAX_VALUE);
+    }
+    t_0 = t[n-1];
+    random_vector_generator(n, y, MAX_VALUE);
+  }
+  //ENDTEST
+
   return 0;
+}
+
+void random_vector_generator(long n, double *v, int max) {
+  for (long i = 0; i < n; i++) {
+    v[i] = rand() % (max+1);
+    //v[i] = i+1;
+  }
+
+  //TEST
+  if(n==7) {
+    v[0] = 6;
+    v[1] = 4;
+    v[2] = 2;
+    v[3] = 1;
+    v[4] = 3;
+    v[5] = 5;
+    v[6] = 7;
+  }
+  if(n==4) {
+    v[0] = 1;
+    v[1] = 2;
+    v[2] = 3;
+    v[3] = 4;
+  }
+  //ENDTEST
 }
