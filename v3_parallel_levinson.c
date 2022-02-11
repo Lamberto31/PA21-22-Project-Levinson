@@ -34,6 +34,13 @@ int main(int argc, char *argv[]) {
   MPI_Aint extent;
   MPI_Datatype interleaved_vector_resized;
 
+  //Vectors
+  double *f;
+  double *b;
+  double *buf;
+  double *x;
+  double *x_res;
+
   //Benchmark
   int loop_count;
 
@@ -113,6 +120,39 @@ int main(int argc, char *argv[]) {
 
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  //Vectors initialization
+  f = (double *) calloc(v_size, sizeof(double));
+  if(!f) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+
+  b = (double *) calloc(v_size, sizeof(double));
+  if(!b) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+
+  buf = (double *) calloc(v_size, sizeof(double));
+  if(!buf) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+
+  x = (double *) calloc(v_size, sizeof(double));
+  if(!x) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
+
+  if(!id) {
+    x_res = (double *) calloc(xres_size, sizeof(double));
+  if(!x_res) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+  }
 
   return 0;
 }
