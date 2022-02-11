@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &p);
 
   //Input check
-  if (argc != 2 && argc != 3) {
+  if(argc != 2 && argc != 3) {
     if(!id) {
       fprintf (stderr, "Usage: %s <n> [<loop count>]\nWhere:\n<n> is the order of the system of linear equation\n<loop_count> is the number of iterations wanted for benchmarking\n", argv[0]);
       MPI_Abort(MPI_COMM_WORLD, -1);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    while (!t[n-1]) {
+    while(!t[n-1]) {
       //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
       random_vector_generator(t_size, t, MAX_VALUE);
     }
