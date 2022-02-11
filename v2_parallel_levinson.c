@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 
   //Decomposition
   //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
-  vectors_size=n/p;
+  vectors_size = n/p + (n%p !=0);
 
   //Input distribution
   if(id){
@@ -134,7 +134,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  //Input broadcasting
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
