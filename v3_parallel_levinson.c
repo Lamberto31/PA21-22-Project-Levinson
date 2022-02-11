@@ -26,6 +26,10 @@ int main(int argc, char *argv[]) {
   long v_size;
   long xres_size;
 
+  //Custom datatype
+  MPI_Datatype interleaved_vector;
+  MPI_Datatype interleaved_vector_resized;
+
   //Benchmark
   int loop_count;
 
@@ -75,6 +79,13 @@ int main(int argc, char *argv[]) {
   //Decomposition
   v_size = n/p + (n%p !=0);   //Ceil
   xres_size = v_size*p;
+
+  //Custom datatype
+  MPI_Type_vector(v_size, 1, p, MPI_DOUBLE, &interleaved_vector);
+  MPI_Type_commit(&interleaved_vector);
+
+  MPI_Type_create_resized(interleaved_vector, 0, sizeof(double), &interleaved_vector_resized);
+  MPI_Type_commit(&interleaved_vector_resized);
 
   return 0;
 }
