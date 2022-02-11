@@ -7,6 +7,7 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
+double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
 void parallel_levinson(int, long, double*, double*, long, double*, double*, double*);
@@ -82,13 +83,7 @@ int main(int argc, char *argv[]) {
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
     //TEST: Random generation
-    srand(time(NULL));
-    while(!t[n-1]) {
-      //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
-      random_vector_generator(t_size, t, MAX_VALUE);
-    }
-    t_0 = t[n-1];
-    random_vector_generator(n, y, MAX_VALUE);
+    t_0 = random_input_generator(n, t_size, t, y);
     //ENDTEST
   }
 
@@ -209,6 +204,16 @@ int main(int argc, char *argv[]) {
   MPI_Finalize();
 
   return 0;
+}
+
+double random_input_generator(long n, long t_size, double *t, double *y) {
+  srand(time(NULL));
+  while(!t[n-1]) {
+    //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
+    random_vector_generator(t_size, t, MAX_VALUE);
+  }
+  random_vector_generator(n, y, MAX_VALUE);
+  return t[n-1];
 }
 
 void random_vector_generator(long n, double *v, int max) {
