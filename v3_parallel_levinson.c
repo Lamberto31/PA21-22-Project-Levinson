@@ -10,6 +10,7 @@
 double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
+void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void parallel_levinson(int, long, double*, double*, long, double*, double*, double*);
 
 int main(int argc, char *argv[]) {
@@ -32,11 +33,6 @@ int main(int argc, char *argv[]) {
 
   //Custom datatype
   MPI_Datatype interleaved_vector;
-  MPI_Aint start_address;
-  MPI_Aint address;
-  MPI_Aint lb;
-  MPI_Aint extent;
-  MPI_Datatype interleaved_vector_resized;
 
   //Vectors
   double *f;
@@ -92,16 +88,7 @@ int main(int argc, char *argv[]) {
   xres_size = v_size*p;
 
   //Custom datatype
-  MPI_Type_vector(v_size, 1, p, MPI_DOUBLE, &interleaved_vector);
-  MPI_Type_commit(&interleaved_vector);
-
-  MPI_Get_address(&t[0], &start_address);
-  lb = MPI_Aint_diff(start_address, start_address);
-  MPI_Get_address(&t[1], &address);
-  extent = MPI_Aint_diff(address, start_address);
-
-  MPI_Type_create_resized(interleaved_vector, lb, extent, &interleaved_vector_resized);
-  MPI_Type_commit(&interleaved_vector_resized);
+  create_resized_interleaved_vector_datatype(v_size, p, &interleaved_vector);
 
   //Input distribution
   if(id) {
@@ -199,7 +186,6 @@ int main(int argc, char *argv[]) {
     free(x_res), x_res = NULL;
 
   MPI_Type_free(&interleaved_vector);
-  MPI_Type_free(&interleaved_vector_resized);
 
   MPI_Finalize();
 
@@ -245,6 +231,30 @@ void vector_t_split(long n, double *t, double *t_p, double *t_n) {
   memcpy(t_n, t, n*sizeof(double)); //In reverse order
   memcpy(t_p, &t[n], n*sizeof(double));
   //TODO reverse???
+}
+
+void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype *resized_interleaved_vector_datatype) {
+
+  MPI_Datatype type_vector;
+
+  double vector[2];
+  MPI_Aint start_address;
+  MPI_Aint address;
+  MPI_Aint lb;
+  MPI_Aint extent;
+
+  MPI_Type_vector(n, 1, stride, MPI_DOUBLE, &type_vector);
+  MPI_Type_commit(&type_vector);
+
+  MPI_Get_address(&vector[0], &start_address);
+  lb = MPI_Aint_diff(start_address, start_address);
+  MPI_Get_address(&vector[1], &address);
+  extent = MPI_Aint_diff(address, start_address);
+
+  MPI_Type_create_resized(type_vector, lb, extent, resized_interleaved_vector_datatype);
+  MPI_Type_commit(resized_interleaved_vector_datatype);
+
+  MPI_Type_free(&type_vector);
 }
 
 void parallel_levinson(int id, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
