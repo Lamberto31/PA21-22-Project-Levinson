@@ -96,6 +96,24 @@ int main(int argc, char *argv[]) {
   MPI_Type_create_resized(interleaved_vector, lb, extent, &interleaved_vector_resized);
   MPI_Type_commit(&interleaved_vector_resized);
 
+  //Input distribution
+  if(id){
+    t = (double *) calloc(t_size, sizeof(double));
+    if(!t){
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    y = (double *) calloc(n, sizeof(double));
+    if(!y){
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+  }
+
+  MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
   return 0;
 }
 
