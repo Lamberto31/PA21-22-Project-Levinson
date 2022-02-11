@@ -8,6 +8,9 @@
 #define LOOP_COUNT 1
 
 void random_vector_generator(long, double*, int);
+void vector_t_split(long, double*, double*, double*);
+void parallel_levinson(int, long, double*, double*, long, double*, double*, double*);
+
 int main(int argc, char *argv[]) {
 
   //VARIABLES
@@ -88,7 +91,6 @@ int main(int argc, char *argv[]) {
     random_vector_generator(n, y, MAX_VALUE);
     //ENDTEST
   }
-
 
   //Decomposition
   v_size = n/p + (n%p !=0);   //Ceil
@@ -172,7 +174,16 @@ int main(int argc, char *argv[]) {
     if(!id)
     memset(x_res, 0, xres_size*sizeof(double));
 
-    //TODO ALGORITHM
+    //EXECUTION OF ALGORITHM
+    //Base case done just by process 0
+    if(!id) {
+      f[0] = 1/t_0;
+      b[0] = 1/t_0;
+      x[0] = y[0]/t_0;
+    }
+
+    //Call of parallel_levinson()
+    parallel_levinson(id, n, t, y, v_size, f, b, x);
 
   }
 
@@ -223,4 +234,31 @@ void random_vector_generator(long n, double *v, int max) {
     v[3] = 4;
   }
   //ENDTEST
+}
+
+void vector_t_split(long n, double *t, double *t_p, double *t_n) {
+  memcpy(t_n, t, n*sizeof(double)); //In reverse order
+  memcpy(t_p, &t[n], n*sizeof(double));
+  //TODO reverse???
+}
+
+void parallel_levinson(int id, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
+
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tf[%ld] = %f\n", id, i, f[i]);
+  }
+  fprintf(stdout, "\n");
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tb[%ld] = %f\n", id, i, b[i]);
+  }
+  fprintf(stdout, "\n");
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tx[%ld] = %f\n", id, i, x[i]);
+  }
+  fprintf(stdout, "\n");
+
+
+  for (long it = 1; it < n; it++) {
+
+  }
 }
