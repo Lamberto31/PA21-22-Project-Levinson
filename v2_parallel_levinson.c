@@ -202,6 +202,10 @@ int main(int argc, char *argv[]) {
       MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Barrier(MPI_COMM_WORLD);
 
+      e_f = errors[0];
+      e_b = errors[1];
+      e_x = errors[2];
+
       //Correctors computation (check to avoid useless work)
       if (id < it) {
         d = 1 - (e_f * e_b);
