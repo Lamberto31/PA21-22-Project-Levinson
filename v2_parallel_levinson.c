@@ -26,16 +26,11 @@ int main(int argc, char *argv[]) {
 
   //Decomposition
   long vectors_size;
+  int ring_size;
 
   //Custom Datatype
-  //TODO Le lascio perchè forse serviranno
-  long count;
-  int blocklength;
-  int k_r0;
-  int *displacements_left;
-  int *displacements_right;
-  MPI_Datatype interleaved_t_left;
-  MPI_Datatype interleaved_t_right;
+  MPI_Datatype interleaved_vector;
+  MPI_Datatype interleaved_vector_resized;
 
   //Vectors
   double *f;
@@ -232,14 +227,14 @@ int main(int argc, char *argv[]) {
         } else {
           ring_size = p;
         }
-        memcpy(buf, b, b_size*sizeof(double));
+        memcpy(buf, b, vectors_size*sizeof(double));
         if (id != 0)
-          MPI_Recv(b, b_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          MPI_Recv(b, vectors_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        MPI_Send(buf, b_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+        MPI_Send(buf, vectors_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
 
         if (id == 0)
-          MPI_Recv(b, b_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          MPI_Recv(b, vectors_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
       }
 
