@@ -113,8 +113,14 @@ int main(int argc, char *argv[]) {
   //ENDTEST
 
   //Decomposition
-  //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
   vectors_size = n/p + (n%p !=0);
+
+  //Custom datatype for final gather
+  MPI_Type_vector(vectors_size, 1, p, MPI_INT, &interleaved_vector);
+  MPI_Type_commit(&interleaved_vector);
+
+  MPI_Type_create_resized(interleaved_vector, 0, sizeof(int), &interleaved_vector_resized);
+  MPI_Type_commit(&interleaved_vector_resized);
 
   //Input distribution
   if(id){
@@ -248,7 +254,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    //TODO GATHER
+    //GATHER
+    MPI_Gather(x, vectors_size, MPI_INT, x_res, 1, interleaved_vector_resized, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
@@ -285,6 +292,9 @@ int main(int argc, char *argv[]) {
   free(x), x = NULL;
   if(!id)
     free(x_res), x_res = NULL;
+
+  MPI_Type_free(&interleaved_vector);
+  MPI_Type_free(&interleaved_vector_resized);
 
   free(t), t = NULL;
   free(y), y = NULL;
