@@ -14,6 +14,7 @@ void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*);
 void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
+void print_result(long, long, double*, double*, double*, double, int);
 
 int main(int argc, char *argv[]) {
 
@@ -180,13 +181,16 @@ int main(int argc, char *argv[]) {
   //Reduction for max time
   MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
+  //Result print
+  if(!id)
+    print_result(n, t_size, t, y, x_res, max_time, iterations);
+
   //Memory release and finalize
   free(t), t = NULL;
   free(y), y = NULL;
 
   free(f), f = NULL;
   free(b), b = NULL;
-  free(buf), buf = NULL;
   free(x), x = NULL;
 
   if(!id)
@@ -383,4 +387,17 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       }
     }
   } //end for it
+}
+
+void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
+  for(long i = 0; i < t_size; i++) {
+    fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+  }
+  for(long i = 0; i < n; i++) {
+    fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
+  }
+  for(long i = 0; i < n; i++) {
+    fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
+  }
+  fprintf(stderr, "Average time: %10.10lf Iterazioni: %d\n", ((double) time / (double) iterations), iterations);
 }
