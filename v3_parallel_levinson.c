@@ -11,7 +11,8 @@ double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
-void parallel_levinson(int, long, double*, double*, long, double*, double*, double*);
+void divide_work(long, int, int, long*, long*, int*);
+void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
 
 int main(int argc, char *argv[]) {
 
@@ -165,7 +166,7 @@ int main(int argc, char *argv[]) {
     }
 
     //Call of parallel_levinson()
-    parallel_levinson(id, n, t, y, v_size, f, b, x);
+    parallel_levinson(id, p, n, t, y, v_size, f, b, x);
 
   }
 
@@ -257,8 +258,24 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
   MPI_Type_free(&type_vector);
 }
 
-void parallel_levinson(int id, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
+void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
+  *ops_errors += ((it-id-1)%p == 0);
+  *ops_update += ((it-id)%p == 0);
+  if (it+1 < p) {
+    *ring_size = it+1;
+  } else {
+    *ring_size = p;
+  }
+}
 
+void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
+
+  long ops_errors;
+  long ops_update;
+  int ring_size;
+
+  //TEST
+  /*
   for (long i = 0; i < v_size; i++) {
     fprintf(stdout, "id = %d\tf[%ld] = %f\n", id, i, f[i]);
   }
@@ -271,9 +288,13 @@ void parallel_levinson(int id, long n, double *t, double *y, long v_size, double
     fprintf(stdout, "id = %d\tx[%ld] = %f\n", id, i, x[i]);
   }
   fprintf(stdout, "\n");
+  */
+  //ENDTEST
 
+  ops_errors = 0;
+  ops_update = (id == 0);
 
   for (long it = 1; it < n; it++) {
-
+    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
   }
 }
