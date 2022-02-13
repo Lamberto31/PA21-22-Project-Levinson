@@ -287,9 +287,7 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
-
-    fprintf(stderr, "ring_size = %d\tv_size = %ld\n", ring_size, v_size);
-
+    
     memcpy(buf, v, v_size*sizeof(double));
     if (id)
       MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -355,19 +353,24 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       errors[0] += t[it-id-i*p+n-1] * f[i];
       errors[1] += t[-id-1-i*p+n-1] * b[ops_errors-1-i];
       errors[2] += t[it-id-i*p+n-1] * x[i];
-      //TESTfprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\nt_n[%ld] = %f\tb[%ld]\n", it, id, it-id-i*p, t[it-id-i*p+n-1], -id-1-i*p, t[-id-1-i*p+n-1], it-1-id-i*p+1); //ENDTEST
+      //TEST
+      //fprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\tf[%ld]=%f\nt_n[%ld] = %f\tb[%ld]=%f\n\n", it, id, it-id-i*p, t[it-id-i*p+n-1], i, f[i], -id-1-i*p, t[-id-1-i*p+n-1], ops_errors-1-i, b[ops_errors-1-i]);
+      //ENDTEST
     }
-    //TESTfprintf(stdout, "\n"); //ENDTEST
+    //TEST
+    //fprintf(stdout, "\n");
+    //ENDTEST
 
     //Reduction
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    /*TEST
+    //TEST
+    /*
     if (!id) {
-      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, errors[0], errors[1], errors[2]);
+      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, global_errors[0], global_errors[1], global_errors[2]);
     }
-    ENDTEST*/
-
+    //ENDTEST
+    */
     if (ops_update) {
       //Correctors computation
       //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
