@@ -279,24 +279,26 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
 }
 
 void exchange_vector(int ring_size, int id, double *v, long v_size) {
-  double *buf;
+  if (ring_size > 1) {
+    double *buf;
 
-  buf = (double *) calloc(v_size, sizeof(double));
-  if(!buf){
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
+    buf = (double *) calloc(v_size, sizeof(double));
+    if(!buf) {
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
-  memcpy(buf, v, v_size*sizeof(double));
-  if (id)
-    MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    memcpy(buf, v, v_size*sizeof(double));
+    if (id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-  MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+    MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
 
-  if (!id)
-    MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (!id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-  free(buf), buf = NULL;
+    free(buf), buf = NULL;
+  }
 }
 
 void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
@@ -351,28 +353,33 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       errors[0] += t[it-id-i*p+n-1] * f[i];
       errors[1] += t[-id-1-i*p+n-1] * b[ops_errors-1-i];
       errors[2] += t[it-id-i*p+n-1] * x[i];
-      //TESTfprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\nt_n[%ld] = %f\tb[%ld]\n", it, id, it-id-i*p, t[it-id-i*p+n-1], -id-1-i*p, t[-id-1-i*p+n-1], it-1-id-i*p+1); //ENDTEST
+      //TEST
+      //fprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\tf[%ld]=%f\nt_n[%ld] = %f\tb[%ld]=%f\n\n", it, id, it-id-i*p, t[it-id-i*p+n-1], i, f[i], -id-1-i*p, t[-id-1-i*p+n-1], ops_errors-1-i, b[ops_errors-1-i]);
+      //ENDTEST
     }
-    //TESTfprintf(stdout, "\n"); //ENDTEST
+    //TEST
+    //fprintf(stdout, "\n");
+    //ENDTEST
 
     //Reduction
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    /*TEST
+    //TEST
+    /*
     if (!id) {
-      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, errors[0], errors[1], errors[2]);
+      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, global_errors[0], global_errors[1], global_errors[2]);
     }
-    ENDTEST*/
-
+    //ENDTEST
+    */
     if (ops_update) {
       //Correctors computation
       //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
-      d = 1 - (errors[0] * errors[1]);
+      d = 1 - (global_errors[0] * global_errors[1]);
       alpha_f = 1/d;
-      beta_f = -errors[0]/d;
-      alpha_b = -errors[1]/d;
+      beta_f = -global_errors[0]/d;
+      alpha_b = -global_errors[1]/d;
       beta_b = 1/d;
-      beta_x = y[it] - errors[2];
+      beta_x = y[it] - global_errors[2];
 
       //Vector b exchange
       exchange_vector(ring_size, id, b, v_size);
@@ -382,7 +389,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
         f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
         f[i] = f_temp;
-        x[i] = x[i] + (beta_x * b[ops_update-i]);
+        x[i] = x[i] + (beta_x * b[ops_update-1-i]);
         //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
@@ -390,14 +397,18 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 }
 
 void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
-  for(long i = 0; i < t_size; i++) {
-    fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+  if (n<50) {
+    for(long i = 0; i < t_size; i++) {
+      fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
+    }
   }
-  for(long i = 0; i < n; i++) {
-    fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
-  }
-  for(long i = 0; i < n; i++) {
-    fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
-  }
+
+
   fprintf(stderr, "Average time: %10.10lf Iterazioni: %d\n", ((double) time / (double) iterations), iterations);
 }
