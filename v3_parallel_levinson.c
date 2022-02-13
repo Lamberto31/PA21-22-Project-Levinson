@@ -367,12 +367,12 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     if (ops_update) {
       //Correctors computation
       //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
-      d = 1 - (errors[0] * errors[1]);
+      d = 1 - (global_errors[0] * global_errors[1]);
       alpha_f = 1/d;
-      beta_f = -errors[0]/d;
-      alpha_b = -errors[1]/d;
+      beta_f = -global_errors[0]/d;
+      alpha_b = -global_errors[1]/d;
       beta_b = 1/d;
-      beta_x = y[it] - errors[2];
+      beta_x = y[it] - global_errors[2];
 
       //Vector b exchange
       exchange_vector(ring_size, id, b, v_size);
