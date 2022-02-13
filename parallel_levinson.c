@@ -7,68 +7,42 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
-double levinson(double*, double*, long);
+double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
+void vector_t_split(long, double*, double*, double*);
+void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
+void divide_work(long, int, int, long*, long*, int*);
+void exchange_vector(int, int, double*, long);
+void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
+void print_result(long, long, double*, double*, double*, double, int);
 
 int main(int argc, char *argv[]) {
 
-  //VARIABLES DECLARATIONS
+  //VARIABLES
   //Process handling
   int id;
   int p;
 
   //Input
   long n;
-  double *y;
-  double *t_full;
-  double t_0;
+  long t_size;
   double *t;
-  //TEST
-  /*
-  long n = 4;
-  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
-  double y[] = { 1, 2, 3,4};
-  */
-  //ENDTEST
+  double t_0;
+  double *y;
 
   //Decomposition
-  long vectors_size;
-  long t_size;
+  long v_size;
+  long xres_size;
 
-  //Custom Datatype
-  long count;
-  int blocklength;
-  int k_r0;
-  int *displacements_left;
-  int *displacements_right;
-  MPI_Datatype interleaved_t_left;
-  MPI_Datatype interleaved_t_right;
+  //Custom datatype
+  MPI_Datatype interleaved_vector;
 
   //Vectors
   double *f;
   double *b;
+  double *buf;
   double *x;
   double *x_res;
-
-  //Iteration idx
-  long it;
-
-  //Errors for each extension of vectors f, b, x
-  double e_f;
-  double e_b;
-  double e_x;
-  double errors[3];
-  double global_errors[3];
-
-  //Correctors
-  double d;
-  double alpha_f;
-  double beta_f;
-  double alpha_b;
-  double beta_b;
-
-  //Temp variable for safe update of b and f
-  double f_temp;
 
   //Benchmark
   double elapsed_time;
@@ -76,94 +50,95 @@ int main(int argc, char *argv[]) {
   int iterations;
   int loop_count;
 
-  //PRELIMINARY OPERATIONS
   //MPI Initialization
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &id);
   MPI_Comm_size(MPI_COMM_WORLD, &p);
 
   //Input check
-  if (argc != 2 && argc != 3) {
+  if(argc != 2 && argc != 3) {
     if(!id) {
       fprintf (stderr, "Usage: %s <n> [<loop count>]\nWhere:\n<n> is the order of the system of linear equation\n<loop_count> is the number of iterations wanted for benchmarking\n", argv[0]);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
   }
   n = strtol(argv[1], NULL, 10);
+  t_size = (2*n)-1;
   if (argc == 3)
     loop_count = strtol(argv[2], NULL, 10);
   else
     loop_count = LOOP_COUNT;
 
   //Input reading made by p0
-  //TEST: per ora gestita con generazione random;
   if(!id) {
-    t = (double *) calloc(2*n-1, sizeof(double));
-    if(!t){
+    t = (double *) calloc(t_size, sizeof(double));
+    if(!t) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
-
     y = (double *) calloc(n, sizeof(double));
-    if(!y){
+    if(!y) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
-
-    srand(time(NULL));
-    while (!t[n-1]) {
-      //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
-      random_vector_generator(2*n-1, t, MAX_VALUE);
-    }
-    t_0 = t[n-1];
-    random_vector_generator(n, y, MAX_VALUE);
+    //TEST: Random generation
+    t_0 = random_input_generator(n, t_size, t, y);
+    //ENDTEST
   }
-  //ENDTEST
 
   //Decomposition
-  //TODO: Necessario gestire indice locale e globale in modo tale da poter fare correttamente i calcoli dopo
-  vectors_size=n/p;
+  v_size = n/p + (n%p !=0);   //Ceil
+  xres_size = v_size*p;
+
+  //Custom datatype
+  create_resized_interleaved_vector_datatype(v_size, p, &interleaved_vector);
 
   //Input distribution
-  if(id){
-    t = (double *) calloc(2*n-1, sizeof(double));
-    if(!t){
+  if(id) {
+    t = (double *) calloc(t_size, sizeof(double));
+    if(!t) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
     y = (double *) calloc(n, sizeof(double));
-    if(!y){
+    if(!y) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
   }
 
-  //Input broadcasting
-  MPI_Bcast(t, 2*n-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-
   //Vectors initialization
+  f = (double *) calloc(v_size, sizeof(double));
+  if(!f) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
 
-  f = (double *) calloc(n, sizeof(double));
-  if(!f){
+  b = (double *) calloc(v_size, sizeof(double));
+  if(!b) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
-  b = (double *) calloc(n, sizeof(double));
-  if(!b){
+
+  buf = (double *) calloc(v_size, sizeof(double));
+  if(!buf) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
-  x = (double *) calloc(n, sizeof(double));
-  if(!x){
+
+  x = (double *) calloc(v_size, sizeof(double));
+  if(!x) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
+
   if(!id) {
-    x_res = (double *) calloc(n, sizeof(double));
-  if(!x_res){
+    x_res = (double *) calloc(xres_size, sizeof(double));
+  if(!x_res) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
     MPI_Abort(MPI_COMM_WORLD, -1);
     }
@@ -174,112 +149,76 @@ int main(int argc, char *argv[]) {
   elapsed_time = -MPI_Wtime();
 
   //Begin the iterations
-  for(iterations = 0; iterations < LOOP_COUNT; iterations++) {
+  for(iterations = 0; iterations < loop_count; iterations++) {
 
     //Vectors reset necessary due to repeated iterations
-    memset(f, 0, n*sizeof(double));
-    memset(b, 0, n*sizeof(double));
-    memset(x, 0, n*sizeof(double));
+    memset(f, 0, v_size*sizeof(double));
+    memset(b, 0, v_size*sizeof(double));
+    memset(buf, 0, v_size*sizeof(double));
+    memset(x, 0, v_size*sizeof(double));
+    if(!id)
+    memset(x_res, 0, xres_size*sizeof(double));
 
+    //EXECUTION OF ALGORITHM
     //Base case done just by process 0
     if(!id) {
-      f[0] = 1/t[n-1];
-      b[0] = 1/t[n-1];
-      x[0] = y[0]/t[n-1];
+      f[0] = 1/t_0;
+      b[0] = 1/t_0;
+      x[0] = y[0]/t_0;
     }
 
-    //Begin of the algorithm iterations
-    for (it = 1; it < n; it++) {
-      //Errors initialization and computation
-      e_f = 0;
-      e_b = 0;
-      e_x = 0;
-      for (long i = id; i < it; i+=p) {
-        e_f = e_f + t[(it+1)-(i+1)+n-1] * f[i];
-        e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
-        e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
-        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, id, i, p, e_f, e_b, e_x);
-      }
+    //Call of parallel_levinson()
+    parallel_levinson(id, p, n, t, y, v_size, f, b, x);
 
-      errors[0] = e_f;
-      errors[1] = e_b;
-      errors[2] = e_x;
-
-      //Reduction
-      MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      //Correctors computation (check to avoid useless work)
-      if (id < it) {
-        d = 1 - (e_f * e_b);
-        alpha_f = 1/d;
-        beta_f = -e_f/d;
-        alpha_b = -e_b/d;
-        beta_b = 1/d;
-      }
-      //fprintf(stdout, "IT = %ld\na_f = %f\nb_f = %f\na_b = %f\nb_b = %f\n\n", it, alpha_f, beta_f, alpha_b, beta_b);
-
-      //Vectors update
-      for (long i = id; i < it+1; i+=p) {
-        f_temp = alpha_f * f[i] + beta_f * b[it-i];
-        b[it-i] = alpha_b * f[i] + beta_b * b[it-i];
-        f[i] = f_temp;
-        x[i] = x[i] + ((y[it] - e_x) * b[it-i]);
-        fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
-      }
-    }
-
-    //TODO GATHER
-    MPI_Barrier(MPI_COMM_WORLD);
+    //Gather
+    MPI_Gather(x, v_size, MPI_DOUBLE, x_res, 1, interleaved_vector, 0, MPI_COMM_WORLD);
   }
 
   //Stop the timer
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time += MPI_Wtime();
 
+  //Reduction for max time
+  MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
   //Result print
-  //TEST
-
-  if(!id){
-    for (int i = 0; i < 2*n-1; i++) {
-      fprintf(stdout, "t[%d] = %10.10lf\n", i, t[i]);
-    }
-    for (int i = 0; i < n; i++) {
-      fprintf(stdout, "y[%d] = %10.10lf\n", i, y[i]);
-    }
-    for (int i = 0; i < n; i++) {
-      fprintf(stdout, "x[%d] = %10.10lf\n", i, x[i]);
-    }
-    //TODO calcolo max_time con reduce;
-    fprintf(stderr, "Tempo medio: %10.10lf Iterazioni: %d\n", ((double) elapsed_time / (double) iterations), iterations);
-  } else {
-    for (int i = 0; i < n; i++) {
-      fprintf(stdout, "x[%d] = %10.10lf\n", i, x[i]);
-    }
-  }
-
-  //ENDTEST
+  if(!id)
+    print_result(n, t_size, t, y, x_res, max_time, iterations);
 
   //Memory release and finalize
-  free(f), f = NULL;
-  free(b), b = NULL;
-  free(x), x = NULL;
-  if(!id)
-    free(x_res), x_res = NULL;
-
   free(t), t = NULL;
   free(y), y = NULL;
 
+  free(f), f = NULL;
+  free(b), b = NULL;
+  free(x), x = NULL;
+
+  if(!id)
+    free(x_res), x_res = NULL;
+
+  MPI_Type_free(&interleaved_vector);
+
   MPI_Finalize();
+
   return 0;
 }
 
+double random_input_generator(long n, long t_size, double *t, double *y) {
+  srand(time(NULL));
+  while(!t[n-1]) {
+    //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
+    random_vector_generator(t_size, t, MAX_VALUE);
+  }
+  random_vector_generator(n, y, MAX_VALUE);
+  return t[n-1];
+}
+
 void random_vector_generator(long n, double *v, int max) {
-  /*for (long i = 0; i < n; i++) {
+  for (long i = 0; i < n; i++) {
     v[i] = rand() % (max+1);
     //v[i] = i+1;
   }
-  */
+
   //TEST
   if(n==7) {
     v[0] = 6;
@@ -297,4 +236,179 @@ void random_vector_generator(long n, double *v, int max) {
     v[3] = 4;
   }
   //ENDTEST
+}
+
+void vector_t_split(long n, double *t, double *t_p, double *t_n) {
+  memcpy(t_n, t, n*sizeof(double)); //In reverse order
+  memcpy(t_p, &t[n], n*sizeof(double));
+  //TODO reverse???
+}
+
+void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype *resized_interleaved_vector_datatype) {
+
+  MPI_Datatype type_vector;
+
+  double vector[2];
+  MPI_Aint start_address;
+  MPI_Aint address;
+  MPI_Aint lb;
+  MPI_Aint extent;
+
+  MPI_Type_vector(n, 1, stride, MPI_DOUBLE, &type_vector);
+  MPI_Type_commit(&type_vector);
+
+  MPI_Get_address(&vector[0], &start_address);
+  lb = MPI_Aint_diff(start_address, start_address);
+  MPI_Get_address(&vector[1], &address);
+  extent = MPI_Aint_diff(address, start_address);
+
+  MPI_Type_create_resized(type_vector, lb, extent, resized_interleaved_vector_datatype);
+  MPI_Type_commit(resized_interleaved_vector_datatype);
+
+  MPI_Type_free(&type_vector);
+}
+
+void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
+  *ops_errors += ((it-id-1)%p == 0);
+  *ops_update += ((it-id)%p == 0);
+  if (it+1 < p) {
+    *ring_size = it+1;
+  } else {
+    *ring_size = p;
+  }
+}
+
+void exchange_vector(int ring_size, int id, double *v, long v_size) {
+  if (ring_size > 1) {
+    double *buf;
+
+    buf = (double *) calloc(v_size, sizeof(double));
+    if(!buf) {
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    memcpy(buf, v, v_size*sizeof(double));
+    if (id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+
+    if (!id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    free(buf), buf = NULL;
+  }
+}
+
+void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
+
+  //Work division
+  long ops_errors;
+  long ops_update;
+  int ring_size;
+
+  //Errors (0 is e_f, 1 is e_b, 2 is e_x)
+  double errors[3];
+  double global_errors[3];
+
+  //Correctors
+  double d;
+  double alpha_f;
+  double beta_f;
+  double alpha_b;
+  double beta_b;
+  double beta_x;
+
+  //Vectors Update
+  double f_temp;
+
+  //TEST
+  /*
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tf[%ld] = %f\n", id, i, f[i]);
+  }
+  fprintf(stdout, "\n");
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tb[%ld] = %f\n", id, i, b[i]);
+  }
+  fprintf(stdout, "\n");
+  for (long i = 0; i < v_size; i++) {
+    fprintf(stdout, "id = %d\tx[%ld] = %f\n", id, i, x[i]);
+  }
+  fprintf(stdout, "\n");
+  */
+  //ENDTEST
+
+  ops_errors = 0;
+  ops_update = (id == 0);
+
+  for (long it = 1; it < n; it++) {
+    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
+
+    //Errors initialization and computation
+    memset(errors, 0, 3*sizeof(double));
+
+    for (long i = 0; i < ops_errors; i++) {
+      errors[0] += t[it-id-i*p+n-1] * f[i];
+      errors[1] += t[-id-1-i*p+n-1] * b[ops_errors-1-i];
+      errors[2] += t[it-id-i*p+n-1] * x[i];
+      //TEST
+      //fprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\tf[%ld]=%f\nt_n[%ld] = %f\tb[%ld]=%f\n\n", it, id, it-id-i*p, t[it-id-i*p+n-1], i, f[i], -id-1-i*p, t[-id-1-i*p+n-1], ops_errors-1-i, b[ops_errors-1-i]);
+      //ENDTEST
+    }
+    //TEST
+    //fprintf(stdout, "\n");
+    //ENDTEST
+
+    //Reduction
+    MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+    //TEST
+    /*
+    if (!id) {
+      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, global_errors[0], global_errors[1], global_errors[2]);
+    }
+    //ENDTEST
+    */
+    if (ops_update) {
+      //Correctors computation
+      //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
+      d = 1 - (global_errors[0] * global_errors[1]);
+      alpha_f = 1/d;
+      beta_f = -global_errors[0]/d;
+      alpha_b = -global_errors[1]/d;
+      beta_b = 1/d;
+      beta_x = y[it] - global_errors[2];
+
+      //Vector b exchange
+      exchange_vector(ring_size, id, b, v_size);
+
+      //Vectors f,b,x update
+      for (long i = 0; i < ops_update; i++) {
+        f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
+        b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
+        f[i] = f_temp;
+        x[i] = x[i] + (beta_x * b[ops_update-1-i]);
+        //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
+      }
+    }
+  } //end for it
+}
+
+void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
+  if (n<50) {
+    for(long i = 0; i < t_size; i++) {
+      fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
+    }
+  }
+
+
+  fprintf(stderr, "Average time: %10.10lf Iterazioni: %d\n", ((double) time / (double) iterations), iterations);
 }
