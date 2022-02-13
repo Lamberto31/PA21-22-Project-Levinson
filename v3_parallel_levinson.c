@@ -12,6 +12,7 @@ void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*);
+void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
 
 int main(int argc, char *argv[]) {
@@ -268,6 +269,27 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
   }
 }
 
+void exchange_vector(int ring_size, int id, double *v, long v_size) {
+  double *buf;
+
+  buf = (double *) calloc(v_size, sizeof(double));
+  if(!buf){
+        fprintf(stderr, "Processor %d: Not enough memory\n", id);
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+  memcpy(buf, v, v_size*sizeof(double));
+  if (id)
+    MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+  MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+
+  if (!id)
+    MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+  free(buf), buf = NULL;
+}
+
 void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
 
   //Work division
@@ -331,8 +353,8 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
     ENDTEST*/
 
-    //Correctors computation
     if (ops_update) {
+      //Correctors computation
       fprintf(stdout, "IT = %ld\tid = %d\n", it, id);
       d = 1 - (errors[0] * errors[1]);
       alpha_f = 1/d;
@@ -340,10 +362,12 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       alpha_b = -errors[1]/d;
       beta_b = 1/d;
       beta_x = y[it] - errors[2];
-    }
-    //TODO: Scambio vettore b
-    //TODO: Update vettori f,b,x
 
+      //Vector b exchange
+      exchange_vector(ring_size, id, b, v_size);
+
+      //TODO: Update vettori f,b,x
+    }
   } //end for it
 
   //TODO: Gather x
