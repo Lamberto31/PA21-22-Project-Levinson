@@ -177,6 +177,9 @@ int main(int argc, char *argv[]) {
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time += MPI_Wtime();
 
+  //Reduction for max time
+  MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
   //Memory release and finalize
   free(t), t = NULL;
   free(y), y = NULL;
