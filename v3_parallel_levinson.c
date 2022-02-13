@@ -309,6 +309,9 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   double beta_b;
   double beta_x;
 
+  //Vectors Update
+  double f_temp;
+
   //TEST
   /*
   for (long i = 0; i < v_size; i++) {
@@ -332,7 +335,6 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   for (long it = 1; it < n; it++) {
     divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
 
-    //ERRORS & CORRECTORS
     //Errors initialization and computation
     memset(errors, 0, 3*sizeof(double));
 
@@ -366,9 +368,14 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       //Vector b exchange
       exchange_vector(ring_size, id, b, v_size);
 
-      //TODO: Update vettori f,b,x
+      //Vectors f,b,x update
+      for (long i = 0; i < ops_update; i++) {
+        f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
+        b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
+        f[i] = f_temp;
+        x[i] = x[i] + (beta_x * b[ops_update-i]);
+        //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
+      }
     }
-  } //end for it
-
-  //TODO: Gather x
+  } //end for it  
 }
