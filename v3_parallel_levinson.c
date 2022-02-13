@@ -169,6 +169,8 @@ int main(int argc, char *argv[]) {
     //Call of parallel_levinson()
     parallel_levinson(id, p, n, t, y, v_size, f, b, x);
 
+    //Gather
+    MPI_Gather(x, v_size, MPI_DOUBLE, x_res, 1, interleaved_vector, 0, MPI_COMM_WORLD);
   }
 
   //Stop the timer
