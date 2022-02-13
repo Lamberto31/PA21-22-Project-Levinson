@@ -357,7 +357,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
     if (ops_update) {
       //Correctors computation
-      fprintf(stdout, "IT = %ld\tid = %d\n", it, id);
+      //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
       d = 1 - (errors[0] * errors[1]);
       alpha_f = 1/d;
       beta_f = -errors[0]/d;
@@ -377,5 +377,5 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
         //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
-  } //end for it  
+  } //end for it
 }
