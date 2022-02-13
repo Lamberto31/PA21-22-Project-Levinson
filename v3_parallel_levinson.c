@@ -382,7 +382,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
         f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
         f[i] = f_temp;
-        x[i] = x[i] + (beta_x * b[ops_update-i]);
+        x[i] = x[i] + (beta_x * b[ops_update-1-i]);
         //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
