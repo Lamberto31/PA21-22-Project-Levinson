@@ -270,9 +270,22 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
 
 void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
 
+  //Work division
   long ops_errors;
   long ops_update;
   int ring_size;
+
+  //Errors (0 is e_f, 1 is e_b, 2 is e_x)
+  double errors[3];
+  double global_errors[3];
+
+  //Correctors
+  double d;
+  double alpha_f;
+  double beta_f;
+  double alpha_b;
+  double beta_b;
+  double beta_x;
 
   //TEST
   /*
@@ -296,5 +309,42 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
   for (long it = 1; it < n; it++) {
     divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
-  }
+
+    //ERRORS & CORRECTORS
+    //Errors initialization and computation
+    memset(errors, 0, 3*sizeof(double));
+
+    for (long i = 0; i < ops_errors; i++) {
+      errors[0] += t[it-id-i*p+n-1] * f[i];
+      errors[1] += t[-id-1-i*p+n-1] * b[ops_errors-1-i];
+      errors[2] += t[it-id-i*p+n-1] * x[i];
+      //TESTfprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\nt_n[%ld] = %f\tb[%ld]\n", it, id, it-id-i*p, t[it-id-i*p+n-1], -id-1-i*p, t[-id-1-i*p+n-1], it-1-id-i*p+1); //ENDTEST
+    }
+    //TESTfprintf(stdout, "\n"); //ENDTEST
+
+    //Reduction
+    MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+    /*TEST
+    if (!id) {
+      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, errors[0], errors[1], errors[2]);
+    }
+    ENDTEST*/
+
+    //Correctors computation
+    if (ops_update) {
+      fprintf(stdout, "IT = %ld\tid = %d\n", it, id);
+      d = 1 - (errors[0] * errors[1]);
+      alpha_f = 1/d;
+      beta_f = -errors[0]/d;
+      alpha_b = -errors[1]/d;
+      beta_b = 1/d;
+      beta_x = y[it] - errors[2];
+    }
+    //TODO: Scambio vettore b
+    //TODO: Update vettori f,b,x
+
+  } //end for it
+
+  //TODO: Gather x
 }
