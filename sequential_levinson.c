@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define MAX_VALUE 100
-#define LOOP_COUNT 1000
+#define LOOP_COUNT 1
 
 double levinson(double*, double*, long);
 void random_vector_generator(long, double*, int);
@@ -28,8 +28,10 @@ int main(int argc, char const *argv[]) {
     random_vector_generator(2*n-1, t, MAX_VALUE);
   }
   random_vector_generator(n, y, MAX_VALUE);*/
-  double t[] = { 6, 4, 2, 1, 3, 5, 7 };
-  double y[] = { 1, 2, 3,4};
+  //double t[] = { 6, 4, 2, 1, 3, 5, 7 };
+  //double t[] = { 10, 9, 8, 6, 4 };
+  double t[] = {6,4,2,1,3,5,7};
+  double y[] = { 1, 2, 3, 4};
   n = 4;
   /*double t[] = { 2, 1, 3 };
   double y[] = { 1, 2};
@@ -96,6 +98,8 @@ double levinson(double *t, double *y, long n) {
         e_b = e_b + t[(i+1)-(it+1)+n-1] * b[i];
         e_x = e_x + t[(it+1)-(i+1)+n-1] * x[i];
       }
+
+      fprintf(stdout, "IT = %d\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, e_f, e_b, e_x);
 
       d = 1 - (e_f * e_b);
       alpha_f = 1/d;
