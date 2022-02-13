@@ -287,7 +287,7 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
-    
+
     memcpy(buf, v, v_size*sizeof(double));
     if (id)
       MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -397,14 +397,18 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 }
 
 void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
-  for(long i = 0; i < t_size; i++) {
-    fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+  if (n<50) {
+    for(long i = 0; i < t_size; i++) {
+      fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
+    }
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
+    }
   }
-  for(long i = 0; i < n; i++) {
-    fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
-  }
-  for(long i = 0; i < n; i++) {
-    fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
-  }
+
+
   fprintf(stderr, "Average time: %10.10lf Iterazioni: %d\n", ((double) time / (double) iterations), iterations);
 }
