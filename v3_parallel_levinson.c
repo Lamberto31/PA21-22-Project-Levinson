@@ -279,24 +279,28 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
 }
 
 void exchange_vector(int ring_size, int id, double *v, long v_size) {
-  double *buf;
+  if (ring_size > 1) {
+    double *buf;
 
-  buf = (double *) calloc(v_size, sizeof(double));
-  if(!buf){
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
+    buf = (double *) calloc(v_size, sizeof(double));
+    if(!buf) {
+      fprintf(stderr, "Processor %d: Not enough memory\n", id);
+      MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
-  memcpy(buf, v, v_size*sizeof(double));
-  if (id)
-    MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    fprintf(stderr, "ring_size = %d\tv_size = %ld\n", ring_size, v_size);
 
-  MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+    memcpy(buf, v, v_size*sizeof(double));
+    if (id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-  if (!id)
-    MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
 
-  free(buf), buf = NULL;
+    if (!id)
+      MPI_Recv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    free(buf), buf = NULL;
+  }
 }
 
 void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
