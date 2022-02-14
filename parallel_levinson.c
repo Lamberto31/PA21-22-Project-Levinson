@@ -170,13 +170,14 @@ int main(int argc, char *argv[]) {
     //Call of parallel_levinson()
     parallel_levinson(id, p, n, t, y, v_size, f, b, x);
 
-    //Gather
-    MPI_Gather(x, v_size, MPI_DOUBLE, x_res, 1, interleaved_vector, 0, MPI_COMM_WORLD);
   }
 
   //Stop the timer
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time += MPI_Wtime();
+
+  //Gather
+  MPI_Gather(x, v_size, MPI_DOUBLE, x_res, 1, interleaved_vector, 0, MPI_COMM_WORLD);
 
   //Reduction for max time
   MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
