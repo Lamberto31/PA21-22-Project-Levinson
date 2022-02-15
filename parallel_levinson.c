@@ -216,24 +216,6 @@ void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
     v[i] = rand() % (max+1);
   }
-
-  //TEST
-  if(n==7) {
-    v[0] = 6;
-    v[1] = 4;
-    v[2] = 2;
-    v[3] = 1;
-    v[4] = 3;
-    v[5] = 5;
-    v[6] = 7;
-  }
-  if(n==4) {
-    v[0] = 1;
-    v[1] = 2;
-    v[2] = 3;
-    v[3] = 4;
-  }
-  //ENDTEST
 }
 
 void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype *resized_interleaved_vector_datatype) {
