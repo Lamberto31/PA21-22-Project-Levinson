@@ -122,12 +122,6 @@ int main(int argc, char *argv[]) {
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
 
-  buf = (double *) calloc(v_size, sizeof(double));
-  if(!buf) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
   x = (double *) calloc(v_size, sizeof(double));
   if(!x) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -152,7 +146,6 @@ int main(int argc, char *argv[]) {
     //Vectors reset necessary due to repeated iterations
     memset(f, 0, v_size*sizeof(double));
     memset(b, 0, v_size*sizeof(double));
-    memset(buf, 0, v_size*sizeof(double));
     memset(x, 0, v_size*sizeof(double));
     if(!id)
     memset(x_res, 0, xres_size*sizeof(double));
@@ -190,7 +183,6 @@ int main(int argc, char *argv[]) {
 
   free(f), f = NULL;
   free(b), b = NULL;
-  free(buf), buf = NULL;
   free(x), x = NULL;
 
   if(!id)
