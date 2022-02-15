@@ -14,6 +14,7 @@ void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*);
 void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
+void print_toeplitz_matrix(long n, double*);
 void print_result(long, long, double*, double*, double*, double, int);
 
 int main(int argc, char *argv[]) {
@@ -398,19 +399,37 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   } //end for it
 }
 
-void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
-  if (n<50) {
-    for(long i = 0; i < t_size; i++) {
+void print_toeplitz_matrix(long n, double *t) {
+  long half = (n-1)/2;
+  if (n > 5) {
+    for (long i = 0; i < (2*n)-1; i++) {
       fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
     }
+  } else {
+    for (long i = 0; i < n; i++) {
+      if (i == half)
+        fprintf(stdout, "T =");
+      fprintf(stdout, "\t[\t");
+      for (long j = 0; j < n; j++) {
+        fprintf(stdout, "%f\t", t[i-j+n-1]);
+      }
+      fprintf(stdout, "]\n");
+    }
+  }
+}
+void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
+  if (n<50) {
+    print_toeplitz_matrix(n, t);
+    fprintf(stdout, "\n");
     for(long i = 0; i < n; i++) {
       fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
     }
+    fprintf(stdout, "\n");
     for(long i = 0; i < n; i++) {
       fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
     }
+    fprintf(stdout, "\n");
   }
-
 
   fprintf(stderr, "Average time: %10.10lf Iterazioni: %d\n", ((double) time / (double) iterations), iterations);
 }
