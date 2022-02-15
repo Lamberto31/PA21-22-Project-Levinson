@@ -1,5 +1,12 @@
-snyder:
-	mpicc -O3 -o par.out parallel_levinson.c -Wall
+CC=mpicc
+SRC=parallel_levinson.c
+EXEC=par_levinson
+CFLAGS=-O3
+
+all: $(EXEC)
+
+$(EXEC): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $(SRC)
 
 clean:
-	rm par.out
+	rm -f $(EXEC)
