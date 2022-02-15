@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
   //Vectors
   double *f;
   double *b;
-  double *buf;
   double *x;
   double *x_res;
 
@@ -82,9 +81,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Processor %d: Not enough memory\n", id);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
-    //TEST: Random generation
     t_0 = random_input_generator(n, t_size, t, y);
-    //ENDTEST
   }
 
   //Decomposition
@@ -209,7 +206,6 @@ int main(int argc, char *argv[]) {
 double random_input_generator(long n, long t_size, double *t, double *y) {
   srand(time(NULL));
   while(!t[n-1]) {
-    //TODO: controllare anche se tutti uguali??? Capire cosa causa nan
     random_vector_generator(t_size, t, MAX_VALUE);
   }
   random_vector_generator(n, y, MAX_VALUE);
@@ -219,7 +215,6 @@ double random_input_generator(long n, long t_size, double *t, double *y) {
 void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
     v[i] = rand() % (max+1);
-    //v[i] = i+1;
   }
 
   //TEST
@@ -241,14 +236,7 @@ void random_vector_generator(long n, double *v, int max) {
   //ENDTEST
 }
 
-void vector_t_split(long n, double *t, double *t_p, double *t_n) {
-  memcpy(t_n, t, n*sizeof(double)); //In reverse order
-  memcpy(t_p, &t[n], n*sizeof(double));
-  //TODO reverse???
-}
-
 void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype *resized_interleaved_vector_datatype) {
-
   MPI_Datatype type_vector;
 
   double vector[2];
@@ -327,23 +315,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   //Vectors Update
   double f_temp;
 
-  //TEST
-  /*
-  for (long i = 0; i < v_size; i++) {
-    fprintf(stdout, "id = %d\tf[%ld] = %f\n", id, i, f[i]);
-  }
-  fprintf(stdout, "\n");
-  for (long i = 0; i < v_size; i++) {
-    fprintf(stdout, "id = %d\tb[%ld] = %f\n", id, i, b[i]);
-  }
-  fprintf(stdout, "\n");
-  for (long i = 0; i < v_size; i++) {
-    fprintf(stdout, "id = %d\tx[%ld] = %f\n", id, i, x[i]);
-  }
-  fprintf(stdout, "\n");
-  */
-  //ENDTEST
-
+  //Operations division
   ops_errors = 0;
   ops_update = (id == 0);
 
@@ -357,27 +329,14 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       errors[0] += t[it-id-i*p+n-1] * f[i];
       errors[1] += t[-id-1-i*p+n-1] * b[ops_errors-1-i];
       errors[2] += t[it-id-i*p+n-1] * x[i];
-      //TEST
-      //fprintf(stdout, "IT = %ld\tid = %d\nt_p[%ld] = %f\tf[%ld]=%f\nt_n[%ld] = %f\tb[%ld]=%f\n\n", it, id, it-id-i*p, t[it-id-i*p+n-1], i, f[i], -id-1-i*p, t[-id-1-i*p+n-1], ops_errors-1-i, b[ops_errors-1-i]);
-      //ENDTEST
     }
-    //TEST
-    //fprintf(stdout, "\n");
-    //ENDTEST
 
     //Reduction
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    //TEST
-    /*
-    if (!id) {
-      fprintf(stdout, "IT = %ld\ne_f = %f\ne_b = %f\ne_x = %f\n\n", it, global_errors[0], global_errors[1], global_errors[2]);
-    }
-    //ENDTEST
-    */
+
     if (ops_update) {
       //Correctors computation
-      //TESTfprintf(stdout, "IT = %ld\tid = %d\n", it, id); //ENDTEST
       d = 1 - (global_errors[0] * global_errors[1]);
       alpha_f = 1/d;
       beta_f = -global_errors[0]/d;
@@ -394,10 +353,9 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
         f[i] = f_temp;
         x[i] = x[i] + (beta_x * b[ops_update-1-i]);
-        //fprintf(stdout, "IT = %ld\nid = %d\ni = %ld\np = %d\nf = %f\nb = %f\nx = %f\n\n", it, id, i, p, f[i], b[it-i], x[i]);
       }
     }
-  } //end for it
+  }
 }
 
 void print_toeplitz_matrix(long n, double *t) {
