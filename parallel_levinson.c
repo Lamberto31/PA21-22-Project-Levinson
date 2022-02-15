@@ -193,6 +193,7 @@ int main(int argc, char *argv[]) {
 
   free(f), f = NULL;
   free(b), b = NULL;
+  free(buf), buf = NULL;
   free(x), x = NULL;
 
   if(!id)
