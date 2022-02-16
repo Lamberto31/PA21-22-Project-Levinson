@@ -315,11 +315,11 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
 
     memcpy(buf, v, v_size*sizeof(double));
     if (!id) {
-      MPI_Irecv(v, v_size, MPI_INT, ring_size - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, &req);
     } else {
-      MPI_Irecv(v, v_size, MPI_INT, id - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, &req);
     }
-    MPI_Send(buf, v_size, MPI_INT, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
+    MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
     MPI_Wait(&req, MPI_STATUS_IGNORE);
 
     free(buf), buf = NULL;
