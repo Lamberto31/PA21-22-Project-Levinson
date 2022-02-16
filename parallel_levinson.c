@@ -343,15 +343,18 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       alpha_b = -global_errors[1]/d;
       beta_b = 1/d;
       beta_x = y[it] - global_errors[2];
+    }
 
-      //Vector b exchange
-      MPI_Barrier(MPI_COMM_WORLD);
-      comm_time[1] += -MPI_Wtime();
+    //Vector b exchange
+    MPI_Barrier(MPI_COMM_WORLD);
+    comm_time[1] += -MPI_Wtime();
+    if (ops_update)
       exchange_vector(ring_size, id, b, v_size);
-      MPI_Barrier(MPI_COMM_WORLD);
-      comm_time[1] += MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    comm_time[1] += MPI_Wtime();
 
-      //Vectors f,b,x update
+    //Vectors f,b,x update
+    if (ops_update) {
       for (long i = 0; i < ops_update; i++) {
         f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
@@ -406,10 +409,10 @@ void print_result(long n, long t_size, double *t, double *y, double *x_res, doub
   average_communication_time = average_reduction_time + average_exchange_vector_time;
   average_fraction_communication_total_time = average_communication_time / average_time *100;
 
-  fprintf(stderr, "Average total time: %10.10lf Iterazioni: %d\n", average_time, iterations);
-  fprintf(stderr, "Average all_reduction time: %10.10lf Iterazioni: %d\n", average_reduction_time, iterations);
-  fprintf(stderr, "Average exchange vector time: %10.10lf Iterazioni: %d\n", average_exchange_vector_time, iterations);
-  fprintf(stderr, "Average communication time: %10.10lf Iterazioni: %d\n", average_communication_time, iterations);
-  fprintf(stderr, "Fraction of communication time: %10.2f%% Iterazioni: %d\n", average_fraction_communication_total_time, iterations);
+  fprintf(stderr, "Average total time: \t\t\t%10.10lf\tIterazioni: %d\n", average_time, iterations);
+  fprintf(stderr, "Average all_reduction time: \t\t%10.10lf\tIterazioni: %d\n", average_reduction_time, iterations);
+  fprintf(stderr, "Average exchange vector time: \t\t%10.10lf\tIterazioni: %d\n", average_exchange_vector_time, iterations);
+  fprintf(stderr, "Average communication time: \t\t%10.10lf\tIterazioni: %d\n", average_communication_time, iterations);
+  fprintf(stderr, "Fraction of communication time: \t%0.2f%%\t\tIterazioni: %d\n", average_fraction_communication_total_time, iterations);
 
 }
