@@ -30,9 +30,13 @@ int main(int argc, char const *argv[]) {
   random_vector_generator(n, y, MAX_VALUE);*/
   //double t[] = { 6, 4, 2, 1, 3, 5, 7 };
   //double t[] = { 10, 9, 8, 6, 4 };
-  double t[] = {6,4,2,1,3,5,7};
-  double y[] = { 1, 2, 3, 4};
-  n = 4;
+  //double t[] = {6,4,2,1,3,5,7};
+  //double y[] = { 1, 2, 3, 4};
+  //n = 4;
+
+  double t[] = {7,2,5,9,7,4,4,4,7,4,7,5,4,8,8,9,9,7,5};
+  double y[] = {4,2,10,5,9,7,10,4,1,9};
+  n = 10;
   /*double t[] = { 2, 1, 3 };
   double y[] = { 1, 2};
   double n = 2;*/
