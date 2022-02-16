@@ -211,7 +211,7 @@ double random_input_generator(long n, long t_size, double *t, double *y) {
 
 void random_vector_generator(long n, double *v, int max) {
   for (long i = 0; i < n; i++) {
-    v[i] = rand() % (max+1);
+    v[i] = rand() % max + 1;
   }
 
 
@@ -230,6 +230,41 @@ void random_vector_generator(long n, double *v, int max) {
       v[1] = 2;
       v[2] = 3;
       v[3] = 4;
+    }
+    //ENDTEST
+    //TEST
+    if(n==19) {
+      v[0] = 7;
+      v[1] = 2;
+      v[2] = 5;
+      v[3] = 9;
+      v[4] = 7;
+      v[5] = 4;
+      v[6] = 4;
+      v[7] = 4;
+      v[8] = 7;
+      v[9] = 4;
+      v[10] = 7;
+      v[11] = 5;
+      v[12] = 4;
+      v[13] = 8;
+      v[14] = 8;
+      v[15] = 9;
+      v[16] = 9;
+      v[17] = 7;
+      v[18] = 5;
+    }
+    if(n==10) {
+      v[0] = 4;
+      v[1] = 2;
+      v[2] = 10;
+      v[3] = 5;
+      v[4] = 9;
+      v[5] = 7;
+      v[6] = 10;
+      v[7] = 4;
+      v[8] = 1;
+      v[9] = 9;
     }
     //ENDTEST
 }
@@ -403,6 +438,23 @@ void print_result(long n, long t_size, double *t, double *y, double *x_res, doub
     }
     fprintf(stdout, "\n");
   }
+  fprintf(stderr, "t = [");
+  for (long i = 0; i < (2*n)-1; i++) {
+    fprintf(stderr, "%0.0lf", t[i]);
+    if (i != (2*n)-2) {
+      fprintf(stderr, ",");
+    }
+  }
+  fprintf(stderr, "]\n");
+
+  fprintf(stderr, "y = [");
+  for (long i = 0; i < n; i++) {
+    fprintf(stderr, "%0.0lf", y[i]);
+    if (i != n-1) {
+      fprintf(stderr, ",");
+    }
+  }
+  fprintf(stderr, "]\n");
 
   average_time = (double) time / (double) iterations;
   average_reduction_time = (double) comm_time[0] / (double) iterations;
