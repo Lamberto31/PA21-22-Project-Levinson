@@ -7,6 +7,7 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
+void allocate_and_check(double*, long, int);
 double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
@@ -73,16 +74,8 @@ int main(int argc, char *argv[]) {
 
   //Input reading made by p0
   if(!id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(t, t_size, id);
+    allocate_and_check(y, n, id);
     t_0 = random_input_generator(n, t_size, t, y);
   }
 
@@ -95,48 +88,19 @@ int main(int argc, char *argv[]) {
 
   //Input distribution
   if(id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(t, t_size, id);
+    allocate_and_check(y, n, id);
   }
 
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   //Vectors initialization
-  f = (double *) calloc(v_size, sizeof(double));
-  if(!f) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  b = (double *) calloc(v_size, sizeof(double));
-  if(!b) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  x = (double *) calloc(v_size, sizeof(double));
-  if(!x) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  if(!id) {
-    x_res = (double *) calloc(xres_size, sizeof(double));
-  if(!x_res) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-  }
+  allocate_and_check(f, v_size, id);
+  allocate_and_check(b, v_size, id);
+  allocate_and_check(x, v_size, id);
+  if(!id)
+    allocate_and_check(x, xres_size, id);
 
   //Start the timer
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -198,6 +162,14 @@ int main(int argc, char *argv[]) {
   MPI_Finalize();
 
   return 0;
+}
+
+void allocate_and_check(double *v, long v_size, int id) {
+  v = (double *) calloc(v_size, sizeof(double));
+  if(!v) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
 }
 
 double random_input_generator(long n, long t_size, double *t, double *y) {
@@ -307,11 +279,7 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
     double *buf;
     MPI_Request req;
 
-    buf = (double *) calloc(v_size, sizeof(double));
-    if(!buf) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(buf, v_size, id);
 
     memcpy(buf, v, v_size*sizeof(double));
     if (!id) {
