@@ -326,7 +326,6 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
     //Reduction
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     if (ops_update) {
       //Correctors computation
