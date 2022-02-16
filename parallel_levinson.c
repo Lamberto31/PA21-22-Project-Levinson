@@ -383,6 +383,7 @@ void print_toeplitz_matrix(long n, double *t) {
     }
   }
 }
+
 void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations, double comm_time[]) {
   double average_time;
   double average_reduction_time;
