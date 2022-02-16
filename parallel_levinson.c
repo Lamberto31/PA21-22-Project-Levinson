@@ -439,24 +439,25 @@ void print_result(long n, long t_size, double *t, double *y, double *x_res, doub
       fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
     }
     fprintf(stdout, "\n");
-  }
-  fprintf(stderr, "t = [");
-  for (long i = 0; i < (2*n)-1; i++) {
-    fprintf(stderr, "%0.0lf", t[i]);
-    if (i != (2*n)-2) {
-      fprintf(stderr, ",");
-    }
-  }
-  fprintf(stderr, "]\n");
 
-  fprintf(stderr, "y = [");
-  for (long i = 0; i < n; i++) {
-    fprintf(stderr, "%0.0lf", y[i]);
-    if (i != n-1) {
-      fprintf(stderr, ",");
+    fprintf(stderr, "t = [");
+    for (long i = 0; i < (2*n)-1; i++) {
+      fprintf(stderr, "%0.0lf", t[i]);
+      if (i != (2*n)-2) {
+        fprintf(stderr, ",");
+      }
     }
+    fprintf(stderr, "]\n");
+
+    fprintf(stderr, "y = [");
+    for (long i = 0; i < n; i++) {
+      fprintf(stderr, "%0.0lf", y[i]);
+      if (i != n-1) {
+        fprintf(stderr, ",");
+      }
+    }
+    fprintf(stderr, "]\n");
   }
-  fprintf(stderr, "]\n");
 
   average_time = (double) time / (double) iterations;
   average_reduction_time = (double) comm_time[0] / (double) iterations;
