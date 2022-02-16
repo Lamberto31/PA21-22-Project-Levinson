@@ -332,6 +332,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   long ops_errors;
   long ops_update;
   int ring_size;
+  long updated_vector_els;
 
   //Errors (0 is e_f, 1 is e_b, 2 is e_x)
   double errors[3];
@@ -381,10 +382,11 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
 
     //Vector b exchange
+    updated_vector_els = it/p + (it%p !=0);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += -MPI_Wtime();
     if (ops_update)
-      exchange_vector(ring_size, id, b, v_size);
+      exchange_vector(ring_size, id, b, updated_vector_els);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += MPI_Wtime();
 
