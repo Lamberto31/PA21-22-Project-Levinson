@@ -305,7 +305,8 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
 void exchange_vector(int ring_size, int id, double *v, long v_size) {
   if (ring_size > 1) {
     double *buf;
-    MPI_Request req;
+    MPI_Request recv_req;
+    MPI_Request send_req;
 
     buf = (double *) calloc(v_size, sizeof(double));
     if(!buf) {
@@ -315,12 +316,15 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
 
     memcpy(buf, v, v_size*sizeof(double));
     if (!id) {
-      MPI_Irecv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, &recv_req);
     } else {
-      MPI_Irecv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, &recv_req);
     }
     MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
-    MPI_Wait(&req, MPI_STATUS_IGNORE);
+    //MPI_Isend(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD, &send_req);
+
+    MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+    //MPI_Wait(&send_req, MPI_STATUS_IGNORE);
 
     free(buf), buf = NULL;
   }
