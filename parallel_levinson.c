@@ -10,7 +10,6 @@
 void allocate_and_check(double**, long, int);
 double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
-void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, int, double*, long);
