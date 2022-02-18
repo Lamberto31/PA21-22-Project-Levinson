@@ -12,7 +12,7 @@ double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
-void divide_work(long, int, int, long*, long*, int*);
+void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*, double []);
 void print_toeplitz_matrix(long n, double*);
@@ -264,7 +264,7 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
   MPI_Type_free(&type_vector);
 }
 
-void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
+void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size, long *els_to_exchange) {
   *ops_errors = it/p + (it % p > id);
   *ops_update = (it+1)/p + ((it+1) % p > id);
   if (it+1 < p) {
@@ -272,6 +272,7 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
   } else {
     *ring_size = p;
   }
+  *els_to_exchange = it/p + (it%p !=0);
 }
 
 void exchange_vector(int ring_size, int id, double *v, long v_size) {
@@ -300,7 +301,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   long ops_errors;
   long ops_update;
   int ring_size;
-  long updated_vector_els;
+  long els_to_exchange;
 
   //Errors (0 is e_f, 1 is e_b, 2 is e_x)
   double errors[3];
@@ -318,7 +319,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   double f_temp;
 
   for (long it = 1; it < n; it++) {
-    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
+    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size, &els_to_exchange);
 
     //Errors initialization and computation
     memset(errors, 0, 3*sizeof(double));
@@ -335,34 +336,30 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     comm_time[0] += MPI_Wtime();
 
-    if (ops_update) {
-      //Correctors computation
-      d = 1 - (global_errors[0] * global_errors[1]);
-      alpha_f = 1/d;
-      beta_f = -global_errors[0]/d;
-      alpha_b = -global_errors[1]/d;
-      beta_b = 1/d;
-      beta_x = y[it] - global_errors[2];
-    }
+    //Correctors computation
+    d = 1 - (global_errors[0] * global_errors[1]);
+    alpha_f = 1/d;
+    beta_f = -global_errors[0]/d;
+    alpha_b = -global_errors[1]/d;
+    beta_b = 1/d;
+    beta_x = y[it] - global_errors[2];
+
 
     //Vector b exchange
-    updated_vector_els = it/p + (it%p !=0);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += -MPI_Wtime();
     if (ops_update)
-      exchange_vector(ring_size, id, b, updated_vector_els);
+      exchange_vector(ring_size, id, b, els_to_exchange);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += MPI_Wtime();
 
-    //Vectors f,b,x update
-    if (ops_update) {
+    //Vectors f,b,x update{
       for (long i = 0; i < ops_update; i++) {
         f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
         f[i] = f_temp;
         x[i] = x[i] + (beta_x * b[ops_update-1-i]);
       }
-    }
   }
 }
 
