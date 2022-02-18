@@ -264,7 +264,9 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
   MPI_Type_free(&type_vector);
 }
 
+
 void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size, long *els_to_exchange) {
+
   *ops_errors = it/p + (it % p > id);
   *ops_update = (it+1)/p + ((it+1) % p > id);
   if (it+1 < p) {
