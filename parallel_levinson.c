@@ -342,12 +342,12 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       exchange_vector(ring_size, id, b, els_to_exchange);
 
     //Vectors f,b,x update{
-      for (long i = 0; i < ops_update; i++) {
-        f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
-        b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
-        f[i] = f_temp;
-        x[i] = x[i] + (beta_x * b[ops_update-1-i]);
-      }
+    for (long i = 0; i < ops_update; i++) {
+      f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
+      b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
+      f[i] = f_temp;
+      x[i] = x[i] + (beta_x * b[ops_update-1-i]);
+    }
   }
 }
 
