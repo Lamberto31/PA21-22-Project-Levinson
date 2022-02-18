@@ -328,12 +328,14 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     //Correctors computation
-    d = 1 - (global_errors[0] * global_errors[1]);
-    alpha_f = 1/d;
-    beta_f = -global_errors[0]/d;
-    alpha_b = -global_errors[1]/d;
-    beta_b = 1/d;
-    beta_x = y[it] - global_errors[2];
+    if(ops_update) {
+      d = 1 - (global_errors[0] * global_errors[1]);
+      alpha_f = 1/d;
+      beta_f = -global_errors[0]/d;
+      alpha_b = -global_errors[1]/d;
+      beta_b = 1/d;
+      beta_x = y[it] - global_errors[2];
+    }
 
     //Vector b exchange
     if (ops_update)
