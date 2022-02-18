@@ -15,8 +15,9 @@ void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
-void print_toeplitz_matrix(long n, double*);
-void print_result(long, long, double*, double*, double*, double, int);
+void print_toeplitz_matrix(long, double*);
+void print_inline_vector(long, double*, char*);
+void print_result(long, double*, double*, double*, double, int);
 
 int main(int argc, char *argv[]) {
 
@@ -139,7 +140,7 @@ int main(int argc, char *argv[]) {
 
   //Result print
   if(!id)
-    print_result(n, t_size, t, y, x_res, max_time, iterations);
+    print_result(n, t, y, x_res, max_time, iterations);
 
   //Memory release and finalize
   free(t), t = NULL;
@@ -353,59 +354,52 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
 void print_toeplitz_matrix(long n, double *t) {
   long half = (n-1)/2;
+  long t_size = 2*n-1;
   if (n > 5) {
-    for (long i = 0; i < (2*n)-1; i++) {
-      fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
-    }
+    print_inline_vector(t_size, t, "t");
   } else {
     for (long i = 0; i < n; i++) {
       if (i == half)
         fprintf(stdout, "T =");
       fprintf(stdout, "\t[\t");
       for (long j = 0; j < n; j++) {
-        fprintf(stdout, "%f\t", t[i-j+n-1]);
+        fprintf(stdout, "%.0f\t", t[i-j+n-1]);
       }
       fprintf(stdout, "]\n");
     }
+    fprintf(stdout, "\n");
+    fflush(stdout);
   }
 }
 
-void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations) {
+void print_inline_vector(long n, double *v, char* name) {
+  fprintf(stderr, "%s = [", name);
+  for (long i = 0; i < n; i++) {
+    fprintf(stderr, "%.0lf", v[i]);
+    if (i != n-1)
+      fprintf(stderr, ",");
+  }
+  fprintf(stderr, "]\n\n");
+  fflush(stdout);
+}
+
+void print_result(long n, double *t, double *y, double *x_res, double time, int iterations) {
   double average_time;
 
   if (n<50) {
     print_toeplitz_matrix(n, t);
-    fprintf(stdout, "\n");
-    for(long i = 0; i < n; i++) {
-      fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
-    }
-    fprintf(stdout, "\n");
-    for(long i = 0; i < n; i++) {
-      fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
-    }
-    fprintf(stdout, "\n");
+    print_inline_vector(n, y, "y");
 
-    fprintf(stderr, "t = [");
-    for (long i = 0; i < (2*n)-1; i++) {
-      fprintf(stderr, "%0.0lf", t[i]);
-      if (i != (2*n)-2) {
-        fprintf(stderr, ",");
-      }
+    //fprintf(stdout, "\n");
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "x[%ld] = %10.10lf\n", i, x_res[i]);
     }
-    fprintf(stderr, "]\n");
-
-    fprintf(stderr, "y = [");
-    for (long i = 0; i < n; i++) {
-      fprintf(stderr, "%0.0lf", y[i]);
-      if (i != n-1) {
-        fprintf(stderr, ",");
-      }
-    }
-    fprintf(stderr, "]\n");
+    fprintf(stdout, "\n");
+    fflush(stdout);
   }
 
   average_time = (double) time / (double) iterations;
 
-  fprintf(stderr, "Average total time: \t\t\t%10.10lf\tIterazioni: %d\n", average_time, iterations);
-
+  fprintf(stderr, "Average total time: %10.10lf\nAverage calculated on %d iterations\n", average_time, iterations);
+  fflush(stdout);
 }
