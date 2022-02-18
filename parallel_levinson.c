@@ -115,16 +115,7 @@ int main(int argc, char *argv[]) {
     memset(x_res, 0, xres_size*sizeof(double));
 
     //EXECUTION OF ALGORITHM
-    //Base case done just by process 0
-    if(!id) {
-      f[0] = 1/t_0;
-      b[0] = 1/t_0;
-      x[0] = y[0]/t_0;
-    }
-
-    //Call of parallel_levinson()
     parallel_levinson(id, p, n, t, y, v_size, f, b, x);
-
   }
 
   //Stop the timer
@@ -313,6 +304,13 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
   //Vectors Update
   double f_temp;
+
+  //Base case done just by process 0
+  if(!id) {
+    f[0] = 1/t[n-1];
+    b[0] = 1/t[n-1];
+    x[0] = y[0]/t[n-1];
+  }
 
   for (long it = 1; it < n; it++) {
     divide_work(it, id, p, &ops_errors, &ops_update, &ring_size, &els_to_exchange);
