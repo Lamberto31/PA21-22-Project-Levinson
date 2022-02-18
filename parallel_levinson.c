@@ -7,11 +7,12 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
+void allocate_and_check(double**, long, int);
 double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
-void divide_work(long, int, int, long*, long*, int*);
+void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, int, double*, long);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*, double []);
 void print_toeplitz_matrix(long n, double*);
@@ -73,16 +74,8 @@ int main(int argc, char *argv[]) {
 
   //Input reading made by p0
   if(!id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(&t, t_size, id);
+    allocate_and_check(&y, n, id);
     t_0 = random_input_generator(n, t_size, t, y);
   }
 
@@ -95,48 +88,19 @@ int main(int argc, char *argv[]) {
 
   //Input distribution
   if(id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(&t, t_size, id);
+    allocate_and_check(&y, n, id);
   }
 
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   //Vectors initialization
-  f = (double *) calloc(v_size, sizeof(double));
-  if(!f) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  b = (double *) calloc(v_size, sizeof(double));
-  if(!b) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  x = (double *) calloc(v_size, sizeof(double));
-  if(!x) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  if(!id) {
-    x_res = (double *) calloc(xres_size, sizeof(double));
-  if(!x_res) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-  }
+  allocate_and_check(&f, v_size, id);
+  allocate_and_check(&b, v_size, id);
+  allocate_and_check(&x, v_size, id);
+  if(!id)
+    allocate_and_check(&x_res, xres_size, id);
 
   //Start the timer
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -198,6 +162,14 @@ int main(int argc, char *argv[]) {
   MPI_Finalize();
 
   return 0;
+}
+
+void allocate_and_check(double **v, long v_size, int id) {
+  *v = (double *) calloc(v_size, sizeof(double));
+  if(!*v) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
 }
 
 double random_input_generator(long n, long t_size, double *t, double *y) {
@@ -292,7 +264,9 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
   MPI_Type_free(&type_vector);
 }
 
-void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
+
+void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size, long *els_to_exchange) {
+
   *ops_errors = it/p + (it % p > id);
   *ops_update = (it+1)/p + ((it+1) % p > id);
   if (it+1 < p) {
@@ -300,6 +274,7 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
   } else {
     *ring_size = p;
   }
+  *els_to_exchange = it/p + (it%p !=0);
 }
 
 void exchange_vector(int ring_size, int id, double *v, long v_size) {
@@ -307,11 +282,7 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
     double *buf;
     MPI_Request req;
 
-    buf = (double *) calloc(v_size, sizeof(double));
-    if(!buf) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(&buf, v_size, id);
 
     memcpy(buf, v, v_size*sizeof(double));
     if (!id) {
@@ -332,7 +303,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   long ops_errors;
   long ops_update;
   int ring_size;
-  long updated_vector_els;
+  long els_to_exchange;
 
   //Errors (0 is e_f, 1 is e_b, 2 is e_x)
   double errors[3];
@@ -350,7 +321,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   double f_temp;
 
   for (long it = 1; it < n; it++) {
-    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
+    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size, &els_to_exchange);
 
     //Errors initialization and computation
     memset(errors, 0, 3*sizeof(double));
@@ -367,34 +338,30 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     comm_time[0] += MPI_Wtime();
 
-    if (ops_update) {
-      //Correctors computation
-      d = 1 - (global_errors[0] * global_errors[1]);
-      alpha_f = 1/d;
-      beta_f = -global_errors[0]/d;
-      alpha_b = -global_errors[1]/d;
-      beta_b = 1/d;
-      beta_x = y[it] - global_errors[2];
-    }
+    //Correctors computation
+    d = 1 - (global_errors[0] * global_errors[1]);
+    alpha_f = 1/d;
+    beta_f = -global_errors[0]/d;
+    alpha_b = -global_errors[1]/d;
+    beta_b = 1/d;
+    beta_x = y[it] - global_errors[2];
+
 
     //Vector b exchange
-    updated_vector_els = it/p + (it%p !=0);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += -MPI_Wtime();
     if (ops_update)
-      exchange_vector(ring_size, id, b, updated_vector_els);
+      exchange_vector(ring_size, id, b, els_to_exchange);
     MPI_Barrier(MPI_COMM_WORLD);
     comm_time[1] += MPI_Wtime();
 
-    //Vectors f,b,x update
-    if (ops_update) {
+    //Vectors f,b,x update{
       for (long i = 0; i < ops_update; i++) {
         f_temp = alpha_f * f[i] + beta_f * b[ops_update-1-i];
         b[ops_update-1-i] = alpha_b * f[i] + beta_b * b[ops_update-1-i];
         f[i] = f_temp;
         x[i] = x[i] + (beta_x * b[ops_update-1-i]);
       }
-    }
   }
 }
 
