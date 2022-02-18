@@ -293,8 +293,8 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
 }
 
 void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
-  *ops_errors += ((it-id-1)%p == 0);
-  *ops_update += ((it-id)%p == 0);
+  *ops_errors = it/p + (it % p > id);
+  *ops_update = (it+1)/p + ((it+1) % p > id);
   if (it+1 < p) {
     *ring_size = it+1;
   } else {
@@ -359,10 +359,6 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       fprintf(stderr, "Processor %d: Not enough memory\n", id);
       MPI_Abort(MPI_COMM_WORLD, -1);
   }
-
-  //Operations division
-  ops_errors = 0;
-  ops_update = (id == 0);
 
   for (long it = 1; it < n; it++) {
     divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
