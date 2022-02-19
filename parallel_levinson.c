@@ -7,15 +7,16 @@
 #define MAX_VALUE 10
 #define LOOP_COUNT 1
 
+void allocate_and_check(double**, long, int);
 double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
-void vector_t_split(long, double*, double*, double*);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
-void divide_work(long, int, int, long*, long*, int*);
+void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, long, int, double*, long, double*, double*, MPI_Request*, MPI_Request*);
-void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*, double []);
-void print_toeplitz_matrix(long n, double*);
-void print_result(long, long, double*, double*, double*, double, int, double[]);
+void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
+void print_toeplitz_matrix(long, double*);
+void print_inline_vector(long, double*, char*);
+void print_result(long, double*, double*, double*, double, int);
 
 int main(int argc, char *argv[]) {
 
@@ -49,8 +50,6 @@ int main(int argc, char *argv[]) {
   double max_time;
   int iterations;
   int loop_count;
-  double communication_time[2];
-  double communication_max_time[2];
 
   //MPI Initialization
   MPI_Init(&argc, &argv);
@@ -73,16 +72,8 @@ int main(int argc, char *argv[]) {
 
   //Input reading made by p0
   if(!id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-        fprintf(stderr, "Processor %d: Not enough memory\n", id);
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(&t, t_size, id);
+    allocate_and_check(&y, n, id);
     t_0 = random_input_generator(n, t_size, t, y);
   }
 
@@ -95,54 +86,23 @@ int main(int argc, char *argv[]) {
 
   //Input distribution
   if(id) {
-    t = (double *) calloc(t_size, sizeof(double));
-    if(!t) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-
-    y = (double *) calloc(n, sizeof(double));
-    if(!y) {
-      fprintf(stderr, "Processor %d: Not enough memory\n", id);
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    allocate_and_check(&t, t_size, id);
+    allocate_and_check(&y, n, id);
   }
 
   MPI_Bcast(t, t_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   //Vectors initialization
-  f = (double *) calloc(v_size, sizeof(double));
-  if(!f) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  b = (double *) calloc(v_size, sizeof(double));
-  if(!b) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  x = (double *) calloc(v_size, sizeof(double));
-  if(!x) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-  }
-
-  if(!id) {
-    x_res = (double *) calloc(xres_size, sizeof(double));
-  if(!x_res) {
-    fprintf(stderr, "Processor %d: Not enough memory\n", id);
-    MPI_Abort(MPI_COMM_WORLD, -1);
-    }
-  }
+  allocate_and_check(&f, v_size, id);
+  allocate_and_check(&b, v_size, id);
+  allocate_and_check(&x, v_size, id);
+  if(!id)
+    allocate_and_check(&x_res, xres_size, id);
 
   //Start the timer
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time = -MPI_Wtime();
-  communication_time[0] = 0;
-  communication_time[1] = 0;
 
   //Begin the iterations
   for(iterations = 0; iterations < loop_count; iterations++) {
@@ -155,16 +115,7 @@ int main(int argc, char *argv[]) {
     memset(x_res, 0, xres_size*sizeof(double));
 
     //EXECUTION OF ALGORITHM
-    //Base case done just by process 0
-    if(!id) {
-      f[0] = 1/t_0;
-      b[0] = 1/t_0;
-      x[0] = y[0]/t_0;
-    }
-
-    //Call of parallel_levinson()
-    parallel_levinson(id, p, n, t, y, v_size, f, b, x, communication_time);
-
+    parallel_levinson(id, p, n, t, y, v_size, f, b, x);
   }
 
   //Stop the timer
@@ -176,11 +127,10 @@ int main(int argc, char *argv[]) {
 
   //Reduction for max time
   MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&communication_time, &communication_max_time, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
   //Result print
   if(!id)
-    print_result(n, t_size, t, y, x_res, max_time, iterations, communication_time);
+    print_result(n, t, y, x_res, max_time, iterations);
 
   //Memory release and finalize
   free(t), t = NULL;
@@ -198,6 +148,14 @@ int main(int argc, char *argv[]) {
   MPI_Finalize();
 
   return 0;
+}
+
+void allocate_and_check(double **v, long v_size, int id) {
+  *v = (double *) calloc(v_size, sizeof(double));
+  if(!*v) {
+    fprintf(stderr, "Processor %d: Not enough memory\n", id);
+    MPI_Abort(MPI_COMM_WORLD, -1);
+  }
 }
 
 double random_input_generator(long n, long t_size, double *t, double *y) {
@@ -292,7 +250,9 @@ void create_resized_interleaved_vector_datatype(long n, int stride, MPI_Datatype
   MPI_Type_free(&type_vector);
 }
 
-void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size) {
+
+void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int *ring_size, long *els_to_exchange) {
+
   *ops_errors = it/p + (it % p > id);
   *ops_update = (it+1)/p + ((it+1) % p > id);
   if (it+1 < p) {
@@ -300,10 +260,12 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
   } else {
     *ring_size = p;
   }
+  *els_to_exchange = it/p + (it%p !=0);
 }
 
 void exchange_vector(int ring_size, long it, int id, double *v, long v_size, double *send_buf, double *recv_buf, MPI_Request *send_req, MPI_Request *recv_req) {
   if (ring_size > 1) {
+
 
     memcpy(send_buf, v, v_size*sizeof(double));
     if (!id) {
@@ -319,15 +281,15 @@ void exchange_vector(int ring_size, long it, int id, double *v, long v_size, dou
   }
 }
 
-void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x, double comm_time[]) {
+void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
 
   //Work division
   long ops_errors;
   long ops_update;
   int ring_size;
+  long els_to_exchange;
 
   //Vectors exchange
-  long updated_vector_els;
   MPI_Request send_req;
   MPI_Request recv_req;
   double *send_buf;
@@ -348,7 +310,13 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   //Vectors Update
   double f_temp;
 
-  //Exchange buffer allocation
+  //Base case done just by process 0
+  if(!id) {
+    f[0] = 1/t[n-1];
+    b[0] = 1/t[n-1];
+    x[0] = y[0]/t[n-1];
+
+  //Exchange buffer allocation TODO allocate with my function
   send_buf = (double *) calloc(v_size, sizeof(double));
   if(!send_buf) {
     fprintf(stderr, "Processor %d: Not enough memory\n", id);
@@ -361,7 +329,7 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   }
 
   for (long it = 1; it < n; it++) {
-    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size);
+    divide_work(it, id, p, &ops_errors, &ops_update, &ring_size, &els_to_exchange);
 
     //Vector b exchange
     updated_vector_els = it/p + (it%p !=0);
@@ -380,12 +348,10 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
 
     //Reduction
-    comm_time[0] += -MPI_Wtime();
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    comm_time[0] += MPI_Wtime();
 
-    if (ops_update) {
-      //Correctors computation
+    //Correctors computation
+    if(ops_update) {
       d = 1 - (global_errors[0] * global_errors[1]);
       alpha_f = 1/d;
       beta_f = -global_errors[0]/d;
@@ -417,71 +383,52 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
 void print_toeplitz_matrix(long n, double *t) {
   long half = (n-1)/2;
+  long t_size = 2*n-1;
   if (n > 5) {
-    for (long i = 0; i < (2*n)-1; i++) {
-      fprintf(stdout, "t[%ld] = %10.10lf\n", i, t[i]);
-    }
+    print_inline_vector(t_size, t, "t");
   } else {
     for (long i = 0; i < n; i++) {
       if (i == half)
         fprintf(stdout, "T =");
       fprintf(stdout, "\t[\t");
       for (long j = 0; j < n; j++) {
-        fprintf(stdout, "%f\t", t[i-j+n-1]);
+        fprintf(stdout, "%.0f\t", t[i-j+n-1]);
       }
       fprintf(stdout, "]\n");
     }
+    fprintf(stdout, "\n");
+    fflush(stdout);
   }
 }
 
-void print_result(long n, long t_size, double *t, double *y, double *x_res, double time, int iterations, double comm_time[]) {
+void print_inline_vector(long n, double *v, char* name) {
+  fprintf(stderr, "%s = [", name);
+  for (long i = 0; i < n; i++) {
+    fprintf(stderr, "%.0lf", v[i]);
+    if (i != n-1)
+      fprintf(stderr, ",");
+  }
+  fprintf(stderr, "]\n\n");
+  fflush(stdout);
+}
+
+void print_result(long n, double *t, double *y, double *x_res, double time, int iterations) {
   double average_time;
-  double average_reduction_time;
-  double average_exchange_vector_time;
-  double average_communication_time;
-  double average_fraction_communication_total_time;
 
   if (n<50) {
     print_toeplitz_matrix(n, t);
-    fprintf(stdout, "\n");
-    for(long i = 0; i < n; i++) {
-      fprintf(stdout, "y[%ld] = %10.10lf\n", i, y[i]);
-    }
-    fprintf(stdout, "\n");
-    for(long i = 0; i < n; i++) {
-      fprintf(stdout, "x_res[%ld] = %10.10lf\n", i, x_res[i]);
-    }
-    fprintf(stdout, "\n");
+    print_inline_vector(n, y, "y");
 
-    fprintf(stderr, "t = [");
-    for (long i = 0; i < (2*n)-1; i++) {
-      fprintf(stderr, "%0.0lf", t[i]);
-      if (i != (2*n)-2) {
-        fprintf(stderr, ",");
-      }
+    //fprintf(stdout, "\n");
+    for(long i = 0; i < n; i++) {
+      fprintf(stdout, "x[%ld] = %10.10lf\n", i, x_res[i]);
     }
-    fprintf(stderr, "]\n");
-
-    fprintf(stderr, "y = [");
-    for (long i = 0; i < n; i++) {
-      fprintf(stderr, "%0.0lf", y[i]);
-      if (i != n-1) {
-        fprintf(stderr, ",");
-      }
-    }
-    fprintf(stderr, "]\n");
+    fprintf(stdout, "\n");
+    fflush(stdout);
   }
 
   average_time = (double) time / (double) iterations;
-  average_reduction_time = (double) comm_time[0] / (double) iterations;
-  average_exchange_vector_time = (double) comm_time[1] / (double) iterations;
-  average_communication_time = average_reduction_time + average_exchange_vector_time;
-  average_fraction_communication_total_time = average_communication_time / average_time *100;
 
-  fprintf(stderr, "Average total time: \t\t\t%10.10lf\tIterazioni: %d\n", average_time, iterations);
-  fprintf(stderr, "Average all_reduction time: \t\t%10.10lf\tIterazioni: %d\n", average_reduction_time, iterations);
-  fprintf(stderr, "Average exchange vector time: \t\t%10.10lf\tIterazioni: %d\n", average_exchange_vector_time, iterations);
-  fprintf(stderr, "Average communication time: \t\t%10.10lf\tIterazioni: %d\n", average_communication_time, iterations);
-  fprintf(stderr, "Fraction of communication time: \t%0.2f%%\t\tIterazioni: %d\n", average_fraction_communication_total_time, iterations);
-
+  fprintf(stderr, "Average total time: %10.10lf\nAverage calculated on %d iterations\n", average_time, iterations);
+  fflush(stdout);
 }
