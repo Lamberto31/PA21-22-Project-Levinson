@@ -13,10 +13,10 @@ void random_vector_generator(long, double*, int);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*, long*);
 void exchange_vector(int, int, double*, long);
-void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
+void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*, double[]);
 void print_toeplitz_matrix(long, double*);
 void print_inline_vector(long, double*, char*);
-void print_result(long, double*, double*, double*, double, int);
+void print_result(long, double*, double*, double*, double, int, double[]);
 
 int main(int argc, char *argv[]) {
 
@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
   double max_time;
   int iterations;
   int loop_count;
+  double communication_time[2];
+  double communication_max_time[2];
 
   //MPI Initialization
   MPI_Init(&argc, &argv);
@@ -103,6 +105,8 @@ int main(int argc, char *argv[]) {
   //Start the timer
 	MPI_Barrier(MPI_COMM_WORLD);
   elapsed_time = -MPI_Wtime();
+  communication_time[0] = 0;
+  communication_time[1] = 0;
 
   //Begin the iterations
   for(iterations = 0; iterations < loop_count; iterations++) {
@@ -115,7 +119,7 @@ int main(int argc, char *argv[]) {
     memset(x_res, 0, xres_size*sizeof(double));
 
     //EXECUTION OF ALGORITHM
-    parallel_levinson(id, p, n, t, y, v_size, f, b, x);
+    parallel_levinson(id, p, n, t, y, v_size, f, b, x, communication_time);
   }
 
   //Stop the timer
@@ -127,10 +131,11 @@ int main(int argc, char *argv[]) {
 
   //Reduction for max time
   MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&communication_time, &communication_max_time, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
   //Result print
   if(!id)
-    print_result(n, t, y, x_res, max_time, iterations);
+    print_result(n, t, y, x_res, max_time, iterations, communication_time);
 
   //Memory release and finalize
   free(t), t = NULL;
@@ -282,7 +287,7 @@ void exchange_vector(int ring_size, int id, double *v, long v_size) {
   }
 }
 
-void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x) {
+void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size, double *f, double *b, double *x, double comm_time[]) {
 
   //Work division
   long ops_errors;
@@ -325,7 +330,9 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
 
     //Reduction
+    comm_time[0] += -MPI_Wtime();
     MPI_Allreduce(&errors, &global_errors, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    comm_time[0] += MPI_Wtime();
 
     //Correctors computation
     if(ops_update) {
@@ -338,8 +345,10 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
 
     //Vector b exchange
+    comm_time[1] += -MPI_Wtime();
     if (ops_update)
       exchange_vector(ring_size, id, b, els_to_exchange);
+    comm_time[1] += MPI_Wtime();
 
     //Vectors f,b,x update{
     for (long i = 0; i < ops_update; i++) {
@@ -382,8 +391,12 @@ void print_inline_vector(long n, double *v, char* name) {
   fflush(stdout);
 }
 
-void print_result(long n, double *t, double *y, double *x_res, double time, int iterations) {
+void print_result(long n, double *t, double *y, double *x_res, double time, int iterations, double comm_time[]) {
   double average_time;
+  double average_reduction_time;
+  double average_exchange_vector_time;
+  double average_communication_time;
+  double average_fraction_communication_total_time;
 
   if (n<50) {
     print_toeplitz_matrix(n, t);
@@ -398,7 +411,15 @@ void print_result(long n, double *t, double *y, double *x_res, double time, int 
   }
 
   average_time = (double) time / (double) iterations;
+  average_reduction_time = (double) comm_time[0] / (double) iterations;
+  average_exchange_vector_time = (double) comm_time[1] / (double) iterations;
+  average_communication_time = average_reduction_time + average_exchange_vector_time;
+  average_fraction_communication_total_time = average_communication_time / average_time *100;
 
   fprintf(stderr, "Average total time: %10.10lf\nAverage calculated on %d iterations\n", average_time, iterations);
+  fprintf(stderr, "Average all_reduction time: \t\t%10.10lf\tIterazioni: %d\n", average_reduction_time, iterations);
+  fprintf(stderr, "Average exchange_vector time: \t\t%10.10lf\tIterazioni: %d\n", average_exchange_vector_time, iterations);
+  fprintf(stderr, "Average communication time: \t\t%10.10lf\tIterazioni: %d\n", average_communication_time, iterations);
+  fprintf(stderr, "Fraction of communication time: \t%0.2f%%\t\tIterazioni: %d\n", average_fraction_communication_total_time, iterations);
   fflush(stdout);
 }
