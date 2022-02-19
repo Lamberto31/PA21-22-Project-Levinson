@@ -359,6 +359,10 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
       x[i] = x[i] + (beta_x * b[ops_update-1-i]);
     }
   }
+
+  //Memory release
+  free(send_buf), send_buf = NULL;
+  free(recv_buf), recv_buf = NULL;
 }
 
 void print_toeplitz_matrix(long n, double *t) {
