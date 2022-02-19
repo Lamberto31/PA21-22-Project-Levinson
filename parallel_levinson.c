@@ -12,7 +12,7 @@ double random_input_generator(long, long, double*, double*);
 void random_vector_generator(long, double*, int);
 void create_resized_interleaved_vector_datatype(long, int, MPI_Datatype*);
 void divide_work(long, int, int, long*, long*, int*, long*);
-void exchange_vector(int, int, double*, long);
+void exchange_vector(int, long, int, double*, long, double*, double*, MPI_Request*, MPI_Request*);
 void parallel_levinson(int, int, long, double*, double*, long, double*, double*, double*);
 void print_toeplitz_matrix(long, double*);
 void print_inline_vector(long, double*, char*);
@@ -262,23 +262,16 @@ void divide_work(long it, int id, int p, long *ops_errors, long *ops_update, int
   *els_to_exchange = it/p + (it%p !=0);
 }
 
-void exchange_vector(int ring_size, int id, double *v, long v_size) {
+void exchange_vector(int ring_size, long it, int id, double *v, long v_size, double *send_buf, double *recv_buf, MPI_Request *send_req, MPI_Request *recv_req) {
   if (ring_size > 1) {
-    double *buf;
-    MPI_Request req;
 
-    allocate_and_check(&buf, v_size, id);
-
-    memcpy(buf, v, v_size*sizeof(double));
+    memcpy(send_buf, v, v_size*sizeof(double));
     if (!id) {
-      MPI_Irecv(v, v_size, MPI_DOUBLE, ring_size - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(recv_buf, v_size, MPI_DOUBLE, ring_size - 1, it, MPI_COMM_WORLD, recv_req);
     } else {
-      MPI_Irecv(v, v_size, MPI_DOUBLE, id - 1, 0, MPI_COMM_WORLD, &req);
+      MPI_Irecv(recv_buf, v_size, MPI_DOUBLE, id - 1, it, MPI_COMM_WORLD, recv_req);
     }
-    MPI_Send(buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, 0, MPI_COMM_WORLD);
-    MPI_Wait(&req, MPI_STATUS_IGNORE);
-
-    free(buf), buf = NULL;
+    MPI_Isend(send_buf, v_size, MPI_DOUBLE, (id + 1) % ring_size, it, MPI_COMM_WORLD, send_req);
   }
 }
 
@@ -289,6 +282,12 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   long ops_update;
   int ring_size;
   long els_to_exchange;
+
+  //Vectors exchange
+  MPI_Request send_req;
+  MPI_Request recv_req;
+  double *send_buf;
+  double *recv_buf;
 
   //Errors (0 is e_f, 1 is e_b, 2 is e_x)
   double errors[3];
@@ -305,6 +304,10 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
   //Vectors Update
   double f_temp;
 
+  //Exchange buffer allocation
+  allocate_and_check(&send_buf, v_size, id);
+  allocate_and_check(&recv_buf, v_size, id);
+
   //Base case done just by process 0
   if(!id) {
     f[0] = 1/t[n-1];
@@ -314,6 +317,10 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
 
   for (long it = 1; it < n; it++) {
     divide_work(it, id, p, &ops_errors, &ops_update, &ring_size, &els_to_exchange);
+
+    //Vector b exchange
+    if (ops_update)
+      exchange_vector(ring_size, it, id, b, els_to_exchange, send_buf, recv_buf, &send_req, &recv_req);
 
     //Errors initialization and computation
     memset(errors, 0, 3*sizeof(double));
@@ -338,8 +345,11 @@ void parallel_levinson(int id, int p, long n, double *t, double *y, long v_size,
     }
 
     //Vector b exchange
-    if (ops_update)
-      exchange_vector(ring_size, id, b, els_to_exchange);
+    if (ops_update && p > 1) {
+      MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+      MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+      memcpy(b, recv_buf, v_size*sizeof(double));
+    }
 
     //Vectors f,b,x update{
     for (long i = 0; i < ops_update; i++) {
