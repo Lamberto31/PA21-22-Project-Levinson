@@ -372,13 +372,13 @@ void print_toeplitz_matrix(long n, double *t) {
 }
 
 void print_inline_vector(long n, double *v, char* name) {
-  fprintf(stderr, "%s = [", name);
+  fprintf(stdout, "%s = [", name);
   for (long i = 0; i < n; i++) {
-    fprintf(stderr, "%.0lf", v[i]);
+    fprintf(stdout, "%.0lf", v[i]);
     if (i != n-1)
-      fprintf(stderr, ",");
+      fprintf(stdout, ",");
   }
-  fprintf(stderr, "]\n\n");
+  fprintf(stdout, "]\n\n");
   fflush(stdout);
 }
 
@@ -399,6 +399,6 @@ void print_result(long n, double *t, double *y, double *x_res, double time, int 
 
   average_time = (double) time / (double) iterations;
 
-  fprintf(stderr, "Average total time: %10.10lf\nAverage calculated on %d iterations\n", average_time, iterations);
+  fprintf(stdout, "Average total time: %10.10lf\nAverage calculated on %d iterations\n", average_time, iterations);
   fflush(stdout);
 }
